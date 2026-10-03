@@ -1,112 +1,310 @@
-﻿using MelonLoader;
+using MelonLoader;
 using Mod.Cheats;
 using Mod.Cheats.ESP;
 using Mod.Game;
+using System.Reflection;
+using HarmonyLib;
+using Il2CppLidgren.Network;
+using Il2CppSystem.Net;
+using Mod.Utils;
 
-[assembly: MelonInfo(typeof(Mod.Mod), "Mod", "1.0.0", "ItsJustMeChris")]
+[assembly: MelonInfo(typeof(Mod.Mod), "LEHud", "0.5.0", "Daxx, glorpette")]
 [assembly: MelonGame("Eleventh Hour Games", "Last Epoch")]
 
-namespace Mod
-{
-    public static class BuildInfo
-    {
-        public const string Name = "Mod"; // Name of the Mod.  (MUST BE SET)
-        public const string Description = "Mod for Testing"; // Description for the Mod.  (Set as null if none)
-        public const string Author = "ItsJustMeChris"; // Author of the Mod.  (MUST BE SET)
-        public const string Company = null; // Company that made the Mod.  (Set as null if none)
-        public const string Version = "1.0.0"; // Version of the Mod.  (MUST BE SET)
-        public const string DownloadLink = null; // Download Link for the Mod.  (Set as null if none)
-    }
+namespace Mod;
 
-    public class Mod : MelonMod
-    {
-        public override void OnInitializeMelon()
-        {
-            //MelonLogger.Msg("OnApplicationStart");
-        }
+	public static class BuildInfo
+	{
+		public const string Name = "LEHud"; // Name of the Mod.  (MUST BE SET)
+		public const string Description = "Hud mod for Last Epoch"; // Description for the Mod.  (Set as null if none)
+		public const string Author = "Daxx, glorpette"; // Author of the Mod.  (MUST BE SET)
+		public const string Company = null; // Company that made the Mod.  (Set as null if none)
+		public const string Version = "0.5.0"; // Version of the Mod.  (MUST BE SET)
+		public const string DownloadLink = null; // Download Link for the Mod.  (Set as null if none)
+	}
 
-        public override void OnLateInitializeMelon() // Runs after OnApplicationStart.
-        {
-            //MelonLogger.Msg("OnApplicationLateStart");
-        }
+	public class Mod : MelonMod
+	{
+		private static bool isOnGUI = false;
+		private static bool s_timeScaleWasApplied;
+		private const string HarmonyId = "LEHud.Patches";
+		private static HarmonyLib.Harmony? s_harmony;
 
-        public override void OnSceneWasLoaded(int buildindex, string sceneName) // Runs when a Scene has Loaded and is passed the Scene's Build Index and Name.
-        {
-            //MelonLogger.Msg("OnSceneWasLoaded: " + buildindex.ToString() + " | " + sceneName);
-        }
+		public override void OnInitializeMelon()
+		{
+			try
+			{
+				// Initialize preferences and load into Settings before applying patches
+				SettingsConfig.Init();
+				SettingsConfig.LoadIntoSettings();
+				MapHack.InitializeSceneFallback();
 
-        public override void OnSceneWasInitialized(int buildindex, string sceneName) // Runs when a Scene has Initialized and is passed the Scene's Build Index and Name.
-        {
-            //MelonLogger.Msg("OnSceneWasInitialized: " + buildindex.ToString() + " | " + sceneName);
-            try
-            {
-                ObjectManager.OnSceneLoaded();
-                MapHack.OnSceneWasLoaded();
-            }
-            catch (System.Exception e)
-            {
-                MelonLogger.Error(e.ToString());
-            }
-        }
+				s_harmony = new HarmonyLib.Harmony(HarmonyId);
+				s_harmony.PatchAll(typeof(Mod).Assembly);
+				MelonLogger.Msg("[LEHud] Harmony patches applied");
+				VerifyNetworkingTargets();
+			}
+			catch (System.Exception e)
+			{
+				MelonLogger.Error($"[LEHud] Harmony init failed: {e.Message}");
+			}
+		}
 
-        public override void OnSceneWasUnloaded(int buildIndex, string sceneName) // Runs when a Scene has Unloaded and is passed the Scene's Build Index and Name.
-        {
-            //MelonLogger.Msg("OnSceneWasUnloaded: " + buildIndex.ToString() + " | " + sceneName);
-        }
+		public override void OnLateInitializeMelon() // Runs after OnApplicationStart.
+		{
+			//MelonLogger.Msg("OnApplicationLateStart");
+			Drawing.Initialize();
+		}
 
-        public override void OnUpdate() // Runs once per frame.
-        {
-            try
-            {
-                ESP.OnUpdate();
-                AutoPotion.OnUpdate();
-                Menu.OnUpdate();
-            }
-            catch (Exception e)
-            {
-                MelonLogger.Error(e.ToString());
-            }
+		public override void OnSceneWasLoaded(int buildindex, string sceneName) // Runs when a Scene has Loaded and is passed the Scene's Build Index and Name.
+		{
+			//MelonLogger.Msg("OnSceneWasLoaded: " + buildindex.ToString() + " | " + sceneName); // occurs before scene init
+			AutoDisconnect.OnSceneChanged();
+			DpsMeter.OnSceneChanged();
+			GameMods.FogRemover();
+		}
 
-            //MelonLogger.Msg("OnUpdate");
-        }
+		public override void OnSceneWasInitialized(int buildindex, string sceneName) // Runs when a Scene has Initialized and is passed the Scene's Build Index and Name.
+		{
+			//MelonLogger.Msg("OnSceneWasInitialized: " + buildindex.ToString() + " | " + sceneName);
 
-        public override void OnFixedUpdate() // Can run multiple times per frame. Mostly used for Physics.
-        {
-            //MelonLogger.Msg("OnFixedUpdate");
-        }
+			//foreach (MethodInfo mi in typeof(UnityEngine.Physics)
+			//	.GetMethods(BindingFlags.Public | BindingFlags.Static))
+			//{
+			//	MelonLogger.Msg($"Method: {mi.Name} ({string.Join(", ", mi.GetParameters().Select(p => p.ParameterType.Name))})");
+			//}
 
-        public override void OnLateUpdate() // Runs once per frame after OnUpdate and OnFixedUpdate have finished.
-        {
-            //MelonLogger.Msg("OnLateUpdate");
-        }
+			try
+			{
+				ObjectManager.OnSceneLoaded();
+				MapHack.OnSceneWasInitialized();
+				GameMods.FogRemover();
+				GameMods.playerLantern();
 
+				// Inform AntiIdleSystem to suppress synthetic keepalive briefly after scene load
+				AntiIdleSystem.OnSceneChanged();
+				AutoDisconnect.OnSceneChanged();
+				Shrines.OnSceneChanged();
+				RunePrisons.OnSceneChanged();
+				Chests.OnSceneChanged();
+				Items.OnSceneChanged();
+				SpecialEntityEspHelper.OnSceneChanged();
+				MinimapEnemyCircles.OnSceneChanged();
+				DamageNumberDiagnostics.OnSceneChanged();
+			}
+			catch (System.Exception e)
+			{
+				MelonLogger.Error(e.ToString());
+			}
+		}
 
-        public override void OnGUI() // Can run multiple times per frame. Mostly used for Unity's IMGUI.
-        {
-            try
-            {
-                Menu.OnGUI();
-                ESP.OnGUI();
-            }
-            catch (Exception e)
-            {
-                MelonLogger.Error(e.ToString());
-            }
-        }
+		public override void OnSceneWasUnloaded(int buildIndex, string sceneName) // Runs when a Scene has Unloaded and is passed the Scene's Build Index and Name.
+		{
+			//MelonLogger.Msg("OnSceneWasUnloaded: " + buildIndex.ToString() + " | " + sceneName);
+		}
 
-        public override void OnApplicationQuit() // Runs when the Game is told to Close.
-        {
-            //MelonLogger.Msg("OnApplicationQuit");
-        }
+		public override void OnUpdate() // Runs once per frame.
+		{
+			bool hasPlayer;
+			try
+			{
+				hasPlayer = ObjectManager.HasPlayer();
+			}
+			catch (Exception e)
+			{
+				hasPlayer = false;
+				Log.ErrorThrottled(LogSource.LEHud, "update:player-check", $"Player-state check failed: {e}", TimeSpan.FromSeconds(5));
+			}
+			if (hasPlayer)
+			{
+				RunUpdateSafely("MapHack", hasPlayer, MapHack.OnUpdate);
+				RunUpdateSafely("ESP", ESP.OnUpdate);
+				RunUpdateSafely("AutoPotion", AutoPotion.OnUpdate);
+				RunUpdateSafely("MinimapEnemyCircles", MinimapEnemyCircles.Update);
+				RunUpdateSafely("AutoDisconnect", AutoDisconnect.OnUpdate);
+			}
+			else
+			{
+				RunUpdateSafely("MapHack", hasPlayer, MapHack.OnUpdate);
+				// Keep overlays clean when no world/player context is available.
+				RunUpdateSafely("ESP.Clear", ESP.Clear);
+				RunUpdateSafely("MinimapEnemyCircles.Clear", MinimapEnemyCircles.ClearCircles);
+			}
 
-        public override void OnPreferencesSaved() // Runs when Melon Preferences get saved.
-        {
-            //MelonLogger.Msg("OnPreferencesSaved");
-        }
+			RunUpdateSafely("Menu", Menu.OnUpdate);
+			RunUpdateSafely("DpsMeter", DpsMeter.OnUpdate);
+			RunUpdateSafely("AntiIdleSystem", AntiIdleSystem.OnUpdate);
 
-        public override void OnPreferencesLoaded() // Runs when Melon Preferences get loaded.
-        {
-            //MelonLogger.Msg("OnPreferencesLoaded");
-        }
-    }
-}
+			try
+			{
+				if (Settings.timeScale != 1.0f)
+				{
+					UnityEngine.Time.timeScale = Settings.timeScale;
+					s_timeScaleWasApplied = true;
+				}
+				else if (s_timeScaleWasApplied)
+				{
+					UnityEngine.Time.timeScale = 1.0f;
+					s_timeScaleWasApplied = false;
+				}
+			}
+			catch (Exception e)
+			{
+				Log.ErrorThrottled(LogSource.LEHud, "timescale-update", $"Time-scale update failed: {e.Message}", TimeSpan.FromSeconds(5));
+			}
+		}
+
+		private static void RunUpdateSafely(string feature, Action update)
+		{
+			try
+			{
+				update();
+			}
+			catch (Exception e)
+			{
+				Log.ErrorThrottled(LogSource.LEHud, $"update:{feature}", $"{feature} update failed: {e}", TimeSpan.FromSeconds(5));
+			}
+		}
+
+		private static void RunUpdateSafely<T>(string feature, T context, Action<T> update)
+		{
+			try
+			{
+				update(context);
+			}
+			catch (Exception e)
+			{
+				Log.ErrorThrottled(LogSource.LEHud, $"update:{feature}", $"{feature} update failed: {e}", TimeSpan.FromSeconds(5));
+			}
+		}
+
+		public override void OnFixedUpdate() // Can run multiple times per frame. Mostly used for Physics.
+		{
+			//MelonLogger.Msg("OnFixedUpdate");
+		}
+
+		public override void OnLateUpdate() // Runs once per frame after OnUpdate and OnFixedUpdate have finished.
+		{
+			//MelonLogger.Msg("OnLateUpdate");
+		}
+
+		public override void OnGUI() // Can run multiple times per frame. Mostly used for Unity's IMGUI.
+		{
+			if (isOnGUI) return;
+			isOnGUI = true;
+
+			try
+			{
+				Drawing.SetupGuiStyle();
+				Menu.OnGUI();
+				ESP.OnGUI();
+				DpsMeter.OnGUI();
+#if DEBUG
+				DebugDiagnostics.OnGUI();
+#endif
+			}
+			catch (System.Exception e)
+			{
+				MelonLogger.Error(e.ToString());
+			}
+
+			isOnGUI = false;
+		}
+
+		public override void OnApplicationQuit() // Runs when the Game is told to Close.
+		{
+			//MelonLogger.Msg("OnApplicationQuit");
+			if (s_timeScaleWasApplied)
+			{
+				UnityEngine.Time.timeScale = 1.0f;
+				s_timeScaleWasApplied = false;
+			}
+			SpriteManager.Cleanup();
+			MinimapEnemyCircles.Cleanup();
+			Drawing.Cleanup();
+			try
+			{
+				// Persist current runtime settings to preferences on quit
+				SettingsConfig.ApplyToPreferencesFromSettings();
+				SettingsConfig.Save();
+				MapHack.DisposeSceneFallback();
+
+				s_harmony?.UnpatchSelf();
+				MelonLogger.Msg("[LEHud] Harmony patches unpatched on quit");
+			}
+			catch (Exception e)
+			{
+				MelonLogger.Error($"[LEHud] Harmony unpatch failed: {e.Message}");
+			}
+		}
+
+		public override void OnPreferencesSaved() // Runs when Melon Preferences get saved.
+		{
+			//MelonLogger.Msg("OnPreferencesSaved");
+		}
+
+		public override void OnPreferencesLoaded() // Runs when Melon Preferences get loaded.
+		{
+			try
+			{
+				if (!SettingsConfig.IsInitialized)
+					return;
+				SettingsConfig.LoadIntoSettings();
+				MelonLogger.Msg("[LEHud] Preferences loaded into Settings");
+			}
+			catch (Exception e)
+			{
+				MelonLogger.Error($"[LEHud] Preferences load error: {e.Message}");
+			}
+		}
+
+		private static void VerifyNetworkingTargets()
+		{
+			try
+			{
+				var nmcType = typeof(NetMultiClient);
+				var npType = typeof(NetPeer);
+				MelonLogger.Msg($"[LEHud] Verify: NetMultiClient type = {nmcType.Name}, NetPeer type = {npType.Name}");
+
+				var connect = AccessTools.Method(nmcType, "Connect", new[] { typeof(IPEndPoint), typeof(NetOutgoingMessage) });
+				MelonLogger.Msg($"[LEHud] Verify: NetMultiClient.Connect found = {connect != null}");
+
+				var disconnect = AccessTools.Method(nmcType, "Disconnect", new[] { typeof(string) });
+				MelonLogger.Msg($"[LEHud] Verify: NetMultiClient.Disconnect found = {disconnect != null}");
+
+				var sendMessage = AccessTools.Method(nmcType, "SendMessage", new[] { typeof(NetOutgoingMessage), typeof(NetDeliveryMethod), typeof(int) });
+				MelonLogger.Msg($"[LEHud] Verify: NetMultiClient.SendMessage found = {sendMessage != null}");
+
+				var getConnStatus = AccessTools.Method(nmcType, "get_ConnectionStatus");
+				MelonLogger.Msg($"[LEHud] Verify: NetMultiClient.get_ConnectionStatus found = {getConnStatus != null}");
+
+				var heartbeatField = AccessTools.Field(npType, "m_lastHeartbeat");
+				MelonLogger.Msg($"[LEHud] Verify: NetPeer.m_lastHeartbeat field found = {heartbeatField != null}");
+
+				// NetTime verification
+				try
+				{
+					var netTimeType = TypeLookup.FindType("Il2CppLidgren.Network.NetTime", "Lidgren.Network.NetTime");
+					if (netTimeType != null)
+					{
+						var nowProp = netTimeType.GetProperty("Now", BindingFlags.Public | BindingFlags.Static) ?? netTimeType.GetProperty("get_Now", BindingFlags.Public | BindingFlags.Static);
+						var nowMethod = nowProp == null ? netTimeType.GetMethod("get_Now", BindingFlags.Public | BindingFlags.Static) : null;
+						bool found = nowProp != null || nowMethod != null;
+						MelonLogger.Msg($"[LEHud] Verify: NetTime.Now found = {found} ({netTimeType.FullName})");
+					}
+					else
+					{
+						MelonLogger.Msg("[LEHud] Verify: NetTime type not found");
+					}
+				}
+				catch (System.Exception ex)
+				{
+					MelonLogger.Error($"[LEHud] Verify: NetTime check error: {ex.Message}");
+				}
+			}
+			catch (System.Exception e)
+			{
+				MelonLogger.Error($"[LEHud] VerifyNetworkingTargets error: {e.Message}");
+			}
+		}
+	}
