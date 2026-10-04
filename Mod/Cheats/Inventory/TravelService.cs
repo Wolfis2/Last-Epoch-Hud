@@ -36,7 +36,7 @@ namespace Mod.Cheats.Inventory
         static bool _primerRunning;
         static bool _unlockUnreadableWarned;
         static float _nextPrimeRetryAt;
-        static int _routeIndex;
+        static int _routeIndex = 1;
         static int _sceneLoadSequence;
         static readonly HashSet<string> _warnedScenes = new();
 
