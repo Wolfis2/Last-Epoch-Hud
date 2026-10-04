@@ -89,6 +89,12 @@
    <Reference Include="UnityEngine.UIModule">
     <HintPath>$(LEMelonLoaderPath)\Il2CppAssemblies\UnityEngine.UIModule.dll</HintPath>
    </Reference>
+   <Reference Include="Unity.TextMeshPro">
+    <HintPath>$(LEMelonLoaderPath)\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
+   </Reference>
+   <Reference Include="Unity.Localization">
+    <HintPath>$(LEMelonLoaderPath)\Il2CppAssemblies\Unity.Localization.dll</HintPath>
+   </Reference>
  </ItemGroup>  
 
  <ItemGroup>

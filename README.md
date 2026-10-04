@@ -2,6 +2,14 @@
 
 LEHud is a MelonLoader mod for Last Epoch. It adds an in-game HUD with configurable overlays and gameplay tools.
 
+## Inventory tools
+
+The F10/Insert menu includes an **Inventory** tab for configuring inventory-panel buttons and quick teleport. The buttons are added to the game's inventory panel and include **STASH**, **STASH ALL**, **VENDOR** (off by default), and **Quick Teleport**. Teleport options are restricted to waypoints unlocked by the character.
+
+The inventory implementation is adapted from [MedicK's Advanced Inventory / Terrible Inventory](https://github.com/medick51o/LastEpoch-Mods/tree/main/medick_Advanced_Inventory), used under its MIT permission; attribution and license text are in `Mod/Cheats/Inventory/THIRD_PARTY_NOTICES.md`.
+
+**Online-play caution:** the upstream project warns that stash/vendor-from-anywhere can conflict with online play and recommends offline use. Use those actions at your own risk.
+
 ## Requirements
 
 - Last Epoch

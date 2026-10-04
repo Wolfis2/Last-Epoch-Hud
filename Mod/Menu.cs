@@ -4,6 +4,7 @@ using static UnityEngine.GUI;
 using MelonLoader;
 using Mod.Cheats;
 using Mod.Cheats.ESP;
+using Mod.Cheats.Inventory;
 using Mod.Game;
 using Mod.Utils;
 
@@ -28,6 +29,7 @@ namespace Mod
 		{
 			new GUIContent("ESP"),
 			new GUIContent("Automation"),
+			new GUIContent("Inventory"),
 			new GUIContent("Gameplay"),
 			new GUIContent("Risky / Debug")
 		};
@@ -56,6 +58,9 @@ namespace Mod
 					DrawAutomationTab();
 					break;
 				case 2:
+					DrawInventoryTab();
+					break;
+				case 3:
 					DrawGameplayTab();
 					break;
 				default:
@@ -284,6 +289,31 @@ namespace Mod
 			}
 		}
 
+		private static void DrawInventoryTab()
+		{
+			GUI.enabled = true;
+			GUILayout.Label("Inventory buttons are added to the game's inventory panel.");
+			GUILayout.Label("Stash/vendor-from-anywhere features may conflict with online play; use at your own risk.");
+			GUILayout.Space(6f);
+
+			DrawInventoryToggle("Show STASH button", Prefs.ShowStash);
+			DrawInventoryToggle("Show STASH ALL button", Prefs.ShowStashAll);
+			DrawInventoryToggle("Show VENDOR button (off by default)", Prefs.ShowVendor);
+			DrawInventoryToggle("Show Quick Teleport menu", Prefs.ShowTeleport);
+			DrawInventoryToggle("Inventory debug logging", Prefs.DebugLog);
+		}
+
+		private static void DrawInventoryToggle(string label, MelonPreferences_Entry<bool> entry)
+		{
+			bool value = GUILayout.Toggle(entry.Value, label);
+			if (value == entry.Value)
+				return;
+
+			entry.Value = value;
+			InventoryUi.ApplyVisibility();
+			Prefs.Save();
+		}
+
 		private static void DrawGameplayTab()
 		{
 			GUI.enabled = true;
@@ -463,7 +493,7 @@ namespace Mod
 			};
 		}
 
-		public static Rect windowRect = new Rect(20, 20, 380, 700);
+		public static Rect windowRect = new Rect(20, 20, 500, 700);
 
 		public static void OnGUI()
 		{

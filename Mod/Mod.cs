@@ -1,6 +1,7 @@
 using MelonLoader;
 using Mod.Cheats;
 using Mod.Cheats.ESP;
+using Mod.Cheats.Inventory;
 using Mod.Game;
 using System.Reflection;
 using HarmonyLib;
@@ -37,6 +38,7 @@ namespace Mod;
 				// Initialize preferences and load into Settings before applying patches
 				SettingsConfig.Init();
 				SettingsConfig.LoadIntoSettings();
+				Prefs.Init();
 				MapHack.InitializeSceneFallback();
 
 				s_harmony = new HarmonyLib.Harmony(HarmonyId);
@@ -61,6 +63,8 @@ namespace Mod;
 			//MelonLogger.Msg("OnSceneWasLoaded: " + buildindex.ToString() + " | " + sceneName); // occurs before scene init
 			AutoDisconnect.OnSceneChanged();
 			DpsMeter.OnSceneChanged();
+			InventoryUi.ResetStashAllGuard();
+			TravelService.NotifySceneLoaded();
 			GameMods.FogRemover();
 		}
 
@@ -185,7 +189,7 @@ namespace Mod;
 
 		public override void OnLateUpdate() // Runs once per frame after OnUpdate and OnFixedUpdate have finished.
 		{
-			//MelonLogger.Msg("OnLateUpdate");
+			InventoryUi.KeepAlive();
 		}
 
 		public override void OnGUI() // Can run multiple times per frame. Mostly used for Unity's IMGUI.
@@ -227,6 +231,7 @@ namespace Mod;
 				// Persist current runtime settings to preferences on quit
 				SettingsConfig.ApplyToPreferencesFromSettings();
 				SettingsConfig.Save();
+				Prefs.Save();
 				MapHack.DisposeSceneFallback();
 
 				s_harmony?.UnpatchSelf();
