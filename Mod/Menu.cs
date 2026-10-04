@@ -317,18 +317,6 @@ namespace Mod
 			DrawInventoryToggle("Show VENDOR button (off by default)", Prefs.ShowVendor);
 			DrawInventoryToggle("Show Quick Teleport menu", Prefs.ShowTeleport);
 			DrawInventoryToggle("Inventory debug logging", Prefs.DebugLog);
-			if (Prefs.DebugLog.Value)
-			{
-				GUILayout.Space(6f);
-				GUILayout.Label("Quick Teleport route (diagnostic)");
-				int route = GUILayout.SelectionGrid(TravelService.RouteIndex, TravelService.RouteNames, 2,
-					GUILayout.Height(54f));
-				if (route != TravelService.RouteIndex)
-				{
-					TravelService.RouteIndex = route;
-					MelonLogger.Msg($"[LEHud] Quick teleport diagnostic route: {TravelService.RouteNames[route]}");
-				}
-			}
 		}
 
 		private static void DrawInventoryToggle(string label, MelonPreferences_Entry<bool> entry)

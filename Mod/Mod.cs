@@ -66,7 +66,7 @@ namespace Mod;
 			AutoDisconnect.OnSceneChanged();
 			DpsMeter.OnSceneChanged();
 			InventoryUi.ResetStashAllGuard();
-			TravelService.NotifySceneLoaded(sceneName);
+			TravelService.NotifySceneLoaded();
 			GameMods.FogRemover();
 		}
 
