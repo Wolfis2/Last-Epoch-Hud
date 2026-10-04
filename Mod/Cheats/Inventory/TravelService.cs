@@ -15,9 +15,8 @@ namespace Mod.Cheats.Inventory
     //  • LoadWaypointScene() on a UIWaypointStandard from a controller's
     //    waypointsInMenu IS the game's own waypoint-click path and routes
     //    correctly online and offline.
-    //  • Each of the 5 era UIWaypointControllers must have OnEnable fired
-    //    once per session before travel works — the silent primer below
-    //    (Andrew's own fix) handles that invisibly.
+    //  • Waypoint data is refreshed through controller APIs only. Never toggle
+    //    hidden UI roots: those ancestors can contain the game's MapPanel.
     //  • v1's fallback chain (map-flash + era-tab text-click + searching all
     //    buttons for "VISIT X") is DELETED. Prime-then-retry replaces it.
     internal static class TravelService
@@ -61,6 +60,7 @@ namespace Mod.Cheats.Inventory
                 Dbg.Log("travel already in progress — click ignored");
                 return;
             }
+            MelonLogger.Msg($"[LEHud] Quick teleport requested: {scene}");
             MelonCoroutines.Start(TravelCoroutine(scene));
         }
 
@@ -110,7 +110,7 @@ namespace Mod.Cheats.Inventory
             if (wp == null)
             {
                 if (_warnedScenes.Add(scene))   // once per scene per session
-                    MelonLogger.Warning($"waypoint '{scene}' not found after re-priming — travel unavailable here");
+                    MelonLogger.Warning($"[LEHud] Quick teleport unavailable: waypoint '{scene}' not present after data refresh (controllers={controllers?.Length ?? 0}).");
                 _travelInProgress = false;
                 yield break;
             }
@@ -144,7 +144,7 @@ namespace Mod.Cheats.Inventory
                 }
                 if (wp == null || !IsUnlocked(controllers, scene, wp))
                 {
-                    MelonLogger.Msg($"'{scene}' is not an unlocked waypoint for this character — ignoring");
+                    MelonLogger.Warning($"[LEHud] Quick teleport refused: '{scene}' is locked or the character unlock data is not ready.");
                     _travelInProgress = false;
                     yield break;
                 }
@@ -161,7 +161,7 @@ namespace Mod.Cheats.Inventory
             }
             if (!waypointManagerReady)
             {
-                MelonLogger.Warning("waypoint manager was not ready after 10 seconds; travel cancelled");
+                MelonLogger.Warning("[LEHud] Quick teleport cancelled: WaypointManager did not initialize within 10 seconds.");
                 _travelInProgress = false;
                 yield break;
             }
@@ -172,11 +172,11 @@ namespace Mod.Cheats.Inventory
             {
                 wp.LoadWaypointScene();
                 fired = true;
-                Dbg.Log($"travel → '{scene}'");
+                MelonLogger.Msg($"[LEHud] Quick teleport submitted to the native waypoint loader: {scene}");
             }
             catch (Exception e)
             {
-                MelonLogger.Warning($"travel to '{scene}' failed: {e.Message}");
+                MelonLogger.Warning($"[LEHud] Quick teleport to '{scene}' failed: {e.Message}");
             }
 
             if (!fired)
@@ -368,11 +368,8 @@ namespace Mod.Cheats.Inventory
             return null;
         }
 
-        // ── Silent era-controller primer (Andrew's fix, v1.3.0) ───
-        // Snapshot the activeSelf of each controller's FULL ancestor chain,
-        // activate root→leaf so OnEnable fires, one frame, restore the EXACT
-        // snapshot. Forcing false afterwards once wiped the world map empty —
-        // snapshot-restore is law.
+        // Data-only initialization. Never activate controllers/ancestors:
+        // those UI roots can contain MapPanel and toggling them opens the map.
 
         static IEnumerator PrimeCoroutine()
         {
@@ -383,80 +380,36 @@ namespace Mod.Cheats.Inventory
                 yield return new WaitForSeconds(0.5f);
                 waited += 0.5f;
             }
-            yield return new WaitForSeconds(0.5f);
-
             UIWaypointController[] all = FindControllers();
-            if (all == null || all.Length == 0)
-            {
-                // Don't latch _primed — a later zone may have controllers;
-                // EnsurePrimed (every inventory open + travel click) retries.
-                Dbg.Log("primer: no era controllers in this scene — will retry later");
-                _primerRunning = false;
-                _nextPrimeRetryAt = Time.time + 1f;
-                yield break;
-            }
+            RefreshWaypointStates(all);
 
-            Dbg.Log($"primer: activating {all.Length} era controllers silently");
-
-            foreach (UIWaypointController ctrl in all)
+            bool haveWaypointData = false;
+            if (all != null)
             {
-                bool wasActive = false;
-                var chain = new List<GameObject>();
-                try
+                foreach (UIWaypointController controller in all)
                 {
-                    wasActive = ctrl.gameObject.activeSelf;
-                    Transform t = ctrl.transform.parent;
-                    while (t != null)
+                    try
                     {
-                        if (!t.gameObject.activeSelf) chain.Add(t.gameObject);
-                        t = t.parent;
+                        if (controller.waypointsInMenu != null && controller.waypointsInMenu.Count > 0)
+                        {
+                            haveWaypointData = true;
+                            break;
+                        }
                     }
+                    catch { }
                 }
-                catch { continue; }
-
-                chain.Reverse();                                  // root → leaf
-                foreach (var go in chain) { try { go.SetActive(true); } catch { } }
-
-                try
-                {
-                    if (ctrl.gameObject.activeSelf) ctrl.gameObject.SetActive(false);
-                    ctrl.gameObject.SetActive(true);              // OnEnable fires here
-                }
-                catch { }
-
-                yield return null;
-
-                try { ctrl.gameObject.SetActive(wasActive); } catch { }
-                chain.Reverse();
-                foreach (var go in chain) { try { go.SetActive(false); } catch { } }
             }
 
-            yield return new WaitForSeconds(0.5f);
-
-            bool allPopulated = all.Length >= 5;
-            foreach (UIWaypointController ctrl in all)
-            {
-                try
-                {
-                    if (ctrl.waypointsInMenu == null || ctrl.waypointsInMenu.Count == 0)
-                    {
-                        allPopulated = false;
-                        break;
-                    }
-                }
-                catch { allPopulated = false; break; }
-            }
-
-            _primed = allPopulated;
+            _primed = haveWaypointData;
             _primerRunning = false;
             if (_primed)
             {
-                Dbg.Log($"primer: all {all.Length} era controllers populated — teleport ready");
+                Dbg.Log($"data refresh: waypoint data available from {all.Length} controllers");
             }
             else
             {
                 _nextPrimeRetryAt = Time.time + 1f;
-                Dbg.Log($"primer: {all.Length} era controllers not fully populated — retry scheduled");
+                Dbg.Log($"data refresh: no waypoint data in {all?.Length ?? 0} controllers — retry scheduled");
             }
         }
     }
