@@ -166,13 +166,24 @@ namespace Mod.Cheats.Inventory
                 yield break;
             }
 
-            // Use the game's dedicated quick-travel path after validating the target.
+            // Match the normal map flow: bind the hidden waypoint to the
+            // existing panel, select the destination, then invoke its travel
+            // button handler. Do not activate or display the map hierarchy.
             bool fired = false;
             try
             {
-                wp.QuickTravel();
+                MapPanel panel = wp._mapPanel;
+                if (panel == null)
+                    panel = UnityEngine.Object.FindObjectOfType<MapPanel>(true);
+                if (panel == null)
+                    throw new InvalidOperationException("MapPanel instance was not found");
+
+                wp._mapPanel = panel;
+                panel.focusedSceneID = wp.sceneName;
+                wp.SelectSceneLocation();
+                panel.PerformTravelButtonAction();
                 fired = true;
-                MelonLogger.Msg($"[LEHud] Quick teleport submitted through UIWaypointStandard.QuickTravel: {scene}");
+                MelonLogger.Msg($"[LEHud] Quick teleport submitted through MapPanel.PerformTravelButtonAction: {scene}");
             }
             catch (Exception e)
             {
