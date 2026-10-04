@@ -24,7 +24,7 @@ namespace Mod;
 		public const string Description = "Hud mod for Last Epoch"; // Description for the Mod.  (Set as null if none)
 		public const string Author = "Daxx, glorpette"; // Author of the Mod.  (MUST BE SET)
 		public const string Company = null; // Company that made the Mod.  (Set as null if none)
-		public const string Version = "0.5.0"; // Version of the Mod.  (MUST BE SET)
+		public const string Version = "0.6.0"; // Version of the Mod.  (MUST BE SET)
 		public const string DownloadLink = null; // Download Link for the Mod.  (Set as null if none)
 	}
 
@@ -255,38 +255,30 @@ namespace Mod;
 			isOnGUI = false;
 		}
 
-		public override void OnApplicationQuit() // Runs when the Game is told to Close.
+		// Shutdown does only managed saves. Destroying Unity objects and unpatching Harmony
+		// detours while the game is tearing down native/Il2Cpp state crashes the process;
+		// the OS reclaims everything on exit anyway.
+		public override void OnApplicationQuit()
 		{
-			//MelonLogger.Msg("OnApplicationQuit");
-			CooldownTrackerRuntime.Save();
-			FallenAutoEnabler.Save();
-			FallenImprovedTooltips.Save();
-			TerribleTooltipsRuntime.Save();
-			if (s_timeScaleWasApplied)
+			Quit("CooldownTracker", CooldownTrackerRuntime.Save);
+			Quit("AutoEnabler", FallenAutoEnabler.Save);
+			Quit("ImprovedTooltips", FallenImprovedTooltips.Save);
+			Quit("TerribleTooltips", TerribleTooltipsRuntime.Save);
+			Quit("Settings", () =>
 			{
-				UnityEngine.Time.timeScale = 1.0f;
-				s_timeScaleWasApplied = false;
-			}
-			SpriteManager.Cleanup();
-			MinimapEnemyCircles.Cleanup();
-			Drawing.Cleanup();
-			try
-			{
-				// Persist current runtime settings to preferences on quit
 				SettingsConfig.ApplyToPreferencesFromSettings();
 				SettingsConfig.Save();
 				Prefs.Save();
-				MapHack.DisposeSceneFallback();
-
-				s_harmony?.UnpatchSelf();
-				MelonLogger.Msg("[LEHud] Harmony patches unpatched on quit");
-			}
-			catch (Exception e)
-			{
-				MelonLogger.Error($"[LEHud] Harmony unpatch failed: {e.Message}");
-			}
+			});
+			s_timeScaleWasApplied = false;
+			MelonLogger.Msg("[LEHud] Shutdown saves complete");
 		}
 
+		static void Quit(string what, Action action)
+		{
+			try { action(); }
+			catch (Exception e) { MelonLogger.Warning($"[LEHud] Quit save '{what}' failed: {e.Message}"); }
+		}
 		public override void OnPreferencesSaved() // Runs when Melon Preferences get saved.
 		{
 			//MelonLogger.Msg("OnPreferencesSaved");

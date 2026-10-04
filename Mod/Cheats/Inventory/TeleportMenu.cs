@@ -64,6 +64,7 @@ namespace Mod.Cheats.Inventory
             {
                 ("The End of Time",   "TOWN",            "EoT",         new Color(0.80f, 0.65f, 0.95f)),
                 ("Champion's Gate",   "ARENA",           "ArenaLobby",  new Color(0.55f, 0.75f, 0.95f)),
+                ("The Nexus",       "MONOLITHS",       "MonolithHub", new Color(0.80f, 0.30f, 0.30f)),
             },
         };
 
@@ -72,6 +73,12 @@ namespace Mod.Cheats.Inventory
         static GameObject _masterTab;
         static GameObject _column;
         static TMP_Text   _masterLabel;
+        static RectTransform _masterChevron;
+        static readonly RectTransform[] _groupChevrons = new RectTransform[3];
+
+        // HUD palette (matches the LEHud menu).
+        static readonly Color Gold = new Color(0.788f, 0.651f, 0.325f);
+        static readonly Color TextHi = new Color(0.929f, 0.902f, 0.831f);
         static bool       _columnOpen = true;
         static readonly bool[]       _groupOpen   = { true, true, true };
         static readonly TMP_Text[]   _groupLabels = new TMP_Text[3];
@@ -95,6 +102,9 @@ namespace Mod.Cheats.Inventory
                 StripLayoutElement(_masterTab);
                 NativeClone.SetRichLabel(_masterTab, MasterLabelText());
                 _masterLabel = NativeClone.Label(_masterTab);
+                _masterChevron = NativeClone.AddChevron(_masterTab, Gold, 16f, 16f);
+                NativeClone.SetLabelInset(_masterTab, 26f);
+                ApplyMasterChevron();
 
                 // ── Column container (VerticalLayoutGroup owns the layout) ──
                 _column = new GameObject("medick_TpColumn");
@@ -139,6 +149,8 @@ namespace Mod.Cheats.Inventory
                 _masterTab = null;
                 _column = null;
                 _masterLabel = null;
+                _masterChevron = null;
+                System.Array.Clear(_groupChevrons, 0, _groupChevrons.Length);
                 _items.Clear();
             }
         }
@@ -154,6 +166,9 @@ namespace Mod.Cheats.Inventory
             NativeClone.SetLayoutSize(go, COL_W, HDR_H);
             NativeClone.SetRichLabel(go, HeaderText(g));
             _groupLabels[g] = NativeClone.Label(go);
+            _groupChevrons[g] = NativeClone.AddChevron(go, Gold, 12f, 12f);
+            NativeClone.SetLabelInset(go, 22f);
+            ApplyGroupChevron(g);
         }
 
         static void AddDestination(GameObject template, int group,
@@ -169,7 +184,7 @@ namespace Mod.Cheats.Inventory
             // Relative size tags + auto-sizing so "Circle of Fortune" and
             // "Forgotten Knights" shrink-to-fit instead of clipping silently.
             NativeClone.SetRichLabel(go,
-                $"<b>{d.line1}</b>\n<size=78%><color=#{hex}>{d.line2}</color></size>",
+                $"<color=#EDE6D4>{d.line1}</color>\n<size=78%><cspace=0.6><color=#{hex}>{d.line2}</color></cspace></size>",
                 baseSize: 11.5f, autoMin: 8.5f, autoMax: 11.5f);
             NativeClone.AddAccentBar(go, d.color);   // faction identity, native art untouched
 
@@ -181,17 +196,29 @@ namespace Mod.Cheats.Inventory
         // Explicit size: the donor label's auto-size leaves a nondeterministic
         // fontSize behind (whatever its own localized string last computed).
         static string MasterLabelText() =>
-            _columnOpen ? "<size=12><b>< QUICK\nTELEPORT</b></size>"
-                        : "<size=12><b>> QUICK\nTELEPORT</b></size>";
+            "<size=12><cspace=1><color=#C9A653>QUICK\nTELEPORT</color></cspace></size>";
 
-        // ASCII arrows on purpose — the game's TMP font has no ▼/▶ glyphs.
         static string HeaderText(int g) =>
-            $"<b><size=10.5>{(_groupOpen[g] ? "v" : ">")} {GroupNames[g]}</size></b>";
+            $"<size=10.5><cspace=1.2><color=#C9A653>{GroupNames[g]}</color></cspace></size>";
 
+        // Open: points left (collapse); closed: points right.
+        static void ApplyMasterChevron()
+        {
+            if (_masterChevron != null)
+                _masterChevron.localRotation = Quaternion.Euler(0f, 0f, _columnOpen ? 180f : 0f);
+        }
+
+        // Open: points down; closed: points right.
+        static void ApplyGroupChevron(int g)
+        {
+            if (_groupChevrons[g] != null)
+                _groupChevrons[g].localRotation = Quaternion.Euler(0f, 0f, _groupOpen[g] ? -90f : 0f);
+        }
         static void ToggleColumn()
         {
             _columnOpen = !_columnOpen;
             if (_masterLabel != null) _masterLabel.text = MasterLabelText();
+            ApplyMasterChevron();
             ApplyVisibility();
         }
 
@@ -199,6 +226,7 @@ namespace Mod.Cheats.Inventory
         {
             _groupOpen[g] = !_groupOpen[g];
             if (_groupLabels[g] != null) _groupLabels[g].text = HeaderText(g);
+            ApplyGroupChevron(g);
             ApplyGroupStates();
         }
 

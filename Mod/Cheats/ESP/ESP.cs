@@ -99,6 +99,8 @@ namespace Mod.Cheats.ESP
 
         public static void OnGUI()
         {
+            // Labels and lines only render on Repaint; skip the Layout/input passes entirely.
+            if (Event.current.type != EventType.Repaint) return;
             Draw();
         }
 

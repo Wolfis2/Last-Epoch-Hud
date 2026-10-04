@@ -439,6 +439,8 @@ namespace Mod
 				{
 					if (dx == 0 && dy == 0)
 						continue;
+					if (offset < 2f && (dx == 0 || dy == 0))
+						continue;
 					GUI.Label(new Rect(rect.x + dx * offset, rect.y + dy * offset, rect.width, rect.height), content, text);
 				}
 			}
@@ -644,10 +646,6 @@ namespace Mod
 			style.fontStyle = FontStyle.Bold;
 
 			style.normal.textColor = EmphasizedOutlineColor;
-			GUI.Label(new Rect(upperLeft.x - 1f, upperLeft.y, size.x, size.y), s_contentA, style);
-			GUI.Label(new Rect(upperLeft.x + 1f, upperLeft.y, size.x, size.y), s_contentA, style);
-			GUI.Label(new Rect(upperLeft.x, upperLeft.y - 1f, size.x, size.y), s_contentA, style);
-			GUI.Label(new Rect(upperLeft.x, upperLeft.y + 1f, size.x, size.y), s_contentA, style);
 			GUI.Label(new Rect(upperLeft.x - 1f, upperLeft.y - 1f, size.x, size.y), s_contentA, style);
 			GUI.Label(new Rect(upperLeft.x + 1f, upperLeft.y - 1f, size.x, size.y), s_contentA, style);
 			GUI.Label(new Rect(upperLeft.x - 1f, upperLeft.y + 1f, size.x, size.y), s_contentA, style);

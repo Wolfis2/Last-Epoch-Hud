@@ -20,11 +20,16 @@ namespace Mod.Cheats.Patches
             MelonLogger.Msg(message);
         }
 
+        // Re-entrancy guard: Close()/SetActive(false) re-enter the very game methods we hook (Escape handling,
+        // IsBugReportPanelOpen, panel OnEnable), which recurses until the stack overflows and the game dies.
+        [ThreadStatic] private static bool t_busy;
+
         public static void TryDisableBugReportUi(object? owner, string source)
         {
-            if (owner == null)
+            if (owner == null || t_busy)
                 return;
 
+            t_busy = true;
             try
             {
                 TryHideMemberObject(owner, "bugReportButton", source);
@@ -43,6 +48,10 @@ namespace Mod.Cheats.Patches
             catch (Exception e)
             {
                 MelonLogger.Error($"[LeHud.Hooks]  {source} bug-report disable error: {e.Message}");
+            }
+            finally
+            {
+                t_busy = false;
             }
         }
 

@@ -157,8 +157,10 @@ namespace Mod.Cheats.Patches
                             .Cast<System.Reflection.MethodBase>()
                             .ToList();
 
-                        s_bugReportButtonField = FindBugButtonField(mainMenuPanelType);
-                        s_bugReportButtonGetter = FindBugButtonGetter(mainMenuPanelType);
+                        // Hiding the button from inside the panel's own Awake/OnEnable/Open hooks coincided with
+                        // stack-overflow crashes on Escape/quit, so the lookup stays disabled (it never matched before).
+                        s_bugReportButtonField = null;
+                        s_bugReportButtonGetter = null;
 
                         if (s_targets.Count == 0)
                             return false;

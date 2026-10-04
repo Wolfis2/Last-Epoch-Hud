@@ -378,6 +378,31 @@ namespace Mod.Cheats.Inventory
             return null;
         }
 
+        static bool _dumped;
+
+        // One-time list of every native waypoint scene id, so new destinations can be added reliably.
+        static void DumpWaypointScenes(UIWaypointController[] all)
+        {
+            if (_dumped) return;
+            _dumped = true;
+            try
+            {
+                var names = new List<string>();
+                foreach (UIWaypointController ctrl in all)
+                {
+                    int count = ctrl.waypointsInMenu?.Count ?? 0;
+                    for (int i = 0; i < count; i++)
+                    {
+                        UIWaypointStandard w = ctrl.waypointsInMenu[i]?.TryCast<UIWaypointStandard>();
+                        if (w != null && !string.IsNullOrEmpty(w.sceneName) && !names.Contains(w.sceneName))
+                            names.Add(w.sceneName);
+                    }
+                }
+                MelonLogger.Msg("[LEHud] Waypoint scenes: " + string.Join(", ", names));
+            }
+            catch { }
+        }
+
         // Data-only initialization. Never activate controllers/ancestors:
         // those UI roots can contain MapPanel and toggling them opens the map.
 
@@ -415,6 +440,7 @@ namespace Mod.Cheats.Inventory
             if (_primed)
             {
                 Dbg.Log($"data refresh: waypoint data available from {all.Length} controllers");
+                DumpWaypointScenes(all);
             }
             else
             {

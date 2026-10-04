@@ -180,6 +180,79 @@ namespace Mod.Cheats.Inventory
             img.raycastTarget = false;
         }
 
+        static Sprite _chevronSprite;
+
+        // Anti-aliased right-pointing triangle, rotated per state. Replaces ASCII arrows,
+        // which the game's TMP font has no good glyphs for.
+        static Sprite ChevronSprite()
+        {
+            if (_chevronSprite != null) return _chevronSprite;
+            const int size = 32;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                hideFlags = HideFlags.HideAndDontSave,
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            Vector2 a = new Vector2(9f, 6f), b = new Vector2(9f, 26f), c = new Vector2(25f, 16f);
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    int hits = 0;
+                    for (int sy = 0; sy < 4; sy++)
+                        for (int sx = 0; sx < 4; sx++)
+                            if (InTriangle(new Vector2(x + (sx + 0.5f) / 4f, y + (sy + 0.5f) / 4f), a, b, c)) hits++;
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(hits * 255 / 16));
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+            _chevronSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            _chevronSprite.hideFlags = HideFlags.HideAndDontSave;
+            return _chevronSprite;
+        }
+
+        static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float d1 = Sign(p, a, b), d2 = Sign(p, b, c), d3 = Sign(p, c, a);
+            bool neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
+            return !(neg && pos);
+        }
+
+        static float Sign(Vector2 p1, Vector2 p2, Vector2 p3)
+            => (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+
+        // Tinted triangle at the button's left edge; returns its RectTransform so callers can rotate it.
+        public static RectTransform AddChevron(GameObject btn, Color color, float x, float size)
+        {
+            var go = new GameObject("medick_Chevron");
+            go.transform.SetParent(btn.transform, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(x, 0f);
+            rt.sizeDelta = new Vector2(size, size);
+            var img = go.AddComponent<Image>();
+            img.sprite = ChevronSprite();
+            img.color = color;
+            img.raycastTarget = false;
+            return rt;
+        }
+
+        // Shifts the label's left edge so text clears a left-hand chevron.
+        public static void SetLabelInset(GameObject btn, float left)
+        {
+            try
+            {
+                var tmp = Label(btn);
+                if (tmp == null) return;
+                var rt = tmp.GetComponent<RectTransform>();
+                rt.offsetMin = new Vector2(left, rt.offsetMin.y);
+            }
+            catch { }
+        }
         // Sized for free-form parents (master tab) — no layout group there.
         public static void SetRect(GameObject go, Vector2 anchoredPos, Vector2 size)
         {
