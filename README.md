@@ -10,6 +10,10 @@ The inventory implementation is adapted from [MedicK's Advanced Inventory / Terr
 
 **Online-play caution:** the upstream project warns that stash/vendor-from-anywhere can conflict with online play and recommends offline use. Use those actions at your own risk.
 
+## Cooldown tracker
+
+The **Cooldowns** tab integrates MedicK's Terrible Cooldowns: live skill artwork above the character during cooldowns, console-style input badges, keyboard/controller detection, per-slot tracking, and per-input-mode labels and glyph selection. Display and behavior settings are in the tab; there is no separate Home-key settings panel. The LEHud window now uses the tracker's charcoal-and-gold visual theme. Existing tracker preference names are retained. Attribution and license details are in `Mod/Cheats/CooldownTracker/THIRD_PARTY_NOTICES.md`.
+
 ## Requirements
 
 - Last Epoch

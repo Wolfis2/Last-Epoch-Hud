@@ -2,6 +2,7 @@ using MelonLoader;
 using Mod.Cheats;
 using Mod.Cheats.ESP;
 using Mod.Cheats.Inventory;
+using CooldownTrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
 using Mod.Game;
 using System.Reflection;
 using HarmonyLib;
@@ -39,6 +40,7 @@ namespace Mod;
 				SettingsConfig.Init();
 				SettingsConfig.LoadIntoSettings();
 				Prefs.Init();
+				CooldownTrackerRuntime.Initialize();
 				MapHack.InitializeSceneFallback();
 
 				s_harmony = new HarmonyLib.Harmony(HarmonyId);
@@ -136,6 +138,7 @@ namespace Mod;
 			}
 
 			RunUpdateSafely("Menu", Menu.OnUpdate);
+			RunUpdateSafely("CooldownTracker", CooldownTrackerRuntime.Update);
 			RunUpdateSafely("DpsMeter", DpsMeter.OnUpdate);
 			RunUpdateSafely("AntiIdleSystem", AntiIdleSystem.OnUpdate);
 
@@ -200,6 +203,7 @@ namespace Mod;
 			try
 			{
 				Drawing.SetupGuiStyle();
+				CooldownTrackerRuntime.DrawOverlay();
 				Menu.OnGUI();
 				ESP.OnGUI();
 				DpsMeter.OnGUI();
@@ -218,6 +222,7 @@ namespace Mod;
 		public override void OnApplicationQuit() // Runs when the Game is told to Close.
 		{
 			//MelonLogger.Msg("OnApplicationQuit");
+			CooldownTrackerRuntime.Save();
 			if (s_timeScaleWasApplied)
 			{
 				UnityEngine.Time.timeScale = 1.0f;

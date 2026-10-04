@@ -5,6 +5,8 @@ using MelonLoader;
 using Mod.Cheats;
 using Mod.Cheats.ESP;
 using Mod.Cheats.Inventory;
+using TrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
+using CooldownTrackerTheme = Mod.Cheats.CooldownTracker.Theme;
 using Mod.Game;
 using Mod.Utils;
 
@@ -30,6 +32,7 @@ namespace Mod
 			new GUIContent("ESP"),
 			new GUIContent("Automation"),
 			new GUIContent("Inventory"),
+			new GUIContent("Cooldowns"),
 			new GUIContent("Gameplay"),
 			new GUIContent("Risky / Debug")
 		};
@@ -61,6 +64,9 @@ namespace Mod
 					DrawInventoryTab();
 					break;
 				case 3:
+					DrawCooldownsTab();
+					break;
+				case 4:
 					DrawGameplayTab();
 					break;
 				default:
@@ -88,12 +94,10 @@ namespace Mod
 			{
 				bool isSelected = s_selectedTab == i;
 				Color prevColor = GUI.color;
-				if (isSelected)
-				{
-					GUI.color = new Color(0.82f, 0.92f, 1f, 1f);
-				}
+				GUI.color = Color.white;
 
-				bool pressed = GUILayout.Toggle(isSelected, s_tabLabels[i], GUI.skin.button, GUILayout.Height(24f));
+				bool pressed = GUILayout.Toggle(isSelected, s_tabLabels[i],
+					CooldownTrackerTheme.Button(10, selected: isSelected), GUILayout.Height(26f));
 				GUI.color = prevColor;
 
 				if (pressed && !isSelected)
@@ -314,6 +318,15 @@ namespace Mod
 			Prefs.Save();
 		}
 
+		private static void DrawCooldownsTab()
+		{
+			GUI.enabled = true;
+			float height = TrackerRuntime.SettingsContentHeight;
+			Rect hostRect = GUILayoutUtility.GetRect(
+				Mathf.Max(320f, windowRect.width - 28f), height, GUILayout.ExpandWidth(true));
+			TrackerRuntime.DrawSettingsTab(hostRect);
+		}
+
 		private static void DrawGameplayTab()
 		{
 			GUI.enabled = true;
@@ -494,6 +507,8 @@ namespace Mod
 		}
 
 		public static Rect windowRect = new Rect(20, 20, 500, 700);
+		public static bool IsCooldownsTabActive => guiVisible && s_selectedTab == 3;
+		public static float CooldownTabScrollOffset => s_tabScrollPositions[3].y;
 
 		public static void OnGUI()
 		{
@@ -508,7 +523,16 @@ namespace Mod
 
 			if (guiVisible)
 			{
-				windowRect = GUI.Window(0, windowRect, (WindowFunction)DrawModWindow, "LaSt EpOP");
+				GUISkin previousSkin = GUI.skin;
+				try
+				{
+					CooldownTrackerTheme.ApplyHudSkin();
+					windowRect = GUI.Window(0, windowRect, (WindowFunction)DrawModWindow, "LEHUD");
+				}
+				finally
+				{
+					GUI.skin = previousSkin;
+				}
 			}
 		}
 
@@ -524,7 +548,8 @@ namespace Mod
 			}
 
 			// Optional input-blocking: blocks gameplay keyboard + mouse while menu is visible.
-			bool shouldBlockGameInput = Settings.blockMenuInputWhenOpen && guiVisible;
+			bool shouldBlockGameInput = (Settings.blockMenuInputWhenOpen && guiVisible) ||
+				TrackerRuntime.ShouldBlockGameInput;
 			if (!s_hasAppliedInputBlockState || s_lastAppliedInputBlockState != shouldBlockGameInput)
 			{
 				EpochInputManagerBridge.TrySetMenuInputBlocked(shouldBlockGameInput);
@@ -563,6 +588,7 @@ namespace Mod
 
 			SettingsConfig.ApplyToPreferencesFromSettings();
 			SettingsConfig.Save();
+			TrackerRuntime.Save();
 			MelonLogger.Msg("[LEHud] Preferences Saved!");
 			AntiIdleSystem.OnMenuClosed();
 		}
