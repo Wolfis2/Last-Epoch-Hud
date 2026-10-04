@@ -76,10 +76,10 @@ namespace Mod
         public static bool showUniqueMonsters = true;
         public static float minimapCircleOpacity = 0.9f;
         public static float minimapNormalCircleSize = 6f;
-        public static float minimapMagicCircleSize = 6f;
-        public static float minimapRareCircleSize = 6f;
-        public static float minimapUniqueCircleSize = 6f;
-        public static float minimapBossCircleSize = 6f;
+        public static float minimapMagicCircleSize = 8f;
+        public static float minimapRareCircleSize = 10f;
+        public static float minimapUniqueCircleSize = 12f;
+        public static float minimapBossCircleSize = 16f;
         public static string minimapNormalCircleColor = "E53935";
         public static string minimapMagicCircleColor = "3588FF";
         public static string minimapRareCircleColor = "F5D328";

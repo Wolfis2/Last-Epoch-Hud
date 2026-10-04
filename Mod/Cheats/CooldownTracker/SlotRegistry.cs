@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Il2Cpp;
 using MelonLoader;
+using Mod.Game;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +17,7 @@ namespace Mod.Cheats.CooldownTracker
         public Image  CooldownBar;
         public float  Fill;
         public bool   OnCooldown;
+        public bool   CooldownStateArmed;
         public float  CooldownObservedSince;
         public AbilityBarIcon Source;
 
@@ -44,6 +46,7 @@ namespace Mod.Cheats.CooldownTracker
         static readonly List<SlotData> _slots = new();
         static readonly object _lock = new();
         static bool _liveReplacementWarned;
+        static float _nextPlayerScanAt;
 
         public static int Count { get { lock (_lock) return _slots.Count; } }
 
@@ -54,14 +57,22 @@ namespace Mod.Cheats.CooldownTracker
             {
                 int idx = icon.abilityNumber;
                 if ((uint)idx >= SlotCount) return;
+                if (!BelongsToLocalPlayer(icon)) return;
+                lock (_lock)
+                {
+                    var current = _slots.Find(x => x.SlotIndex == idx);
+                    if (current != null && current.Source != null && SameNativeInstance(current.Source, icon))
+                        return;
+                }
                 var s = new SlotData
                 {
                     SlotIndex    = idx,
                     GameBoundKey = HotkeyReader.TryRead(icon),
                     Icon         = ReadSprite(icon),
                     CooldownBar  = icon.cooldownBar,
-                    OnCooldown   = icon.cooldownBarActive,
-                    CooldownObservedSince = icon.cooldownBarActive ? Time.time : 0f,
+                    OnCooldown   = false,
+                    CooldownStateArmed = !icon.cooldownBarActive,
+                    CooldownObservedSince = 0f,
                     Source       = icon,
                 };
                 RefreshLabel(s);
@@ -101,6 +112,43 @@ namespace Mod.Cheats.CooldownTracker
         // council 2026-09-11 #2
         static bool SameNativeInstance(AbilityBarIcon a, AbilityBarIcon b) =>
             ReferenceEquals(a, b) || a.Pointer == b.Pointer;
+
+        static bool BelongsToLocalPlayer(AbilityBarIcon icon)
+        {
+            try
+            {
+                GameObject owner = icon.player;
+                GameObject local = ObjectManager.GetLocalPlayer();
+                return owner != null && local != null && SameNativeInstance(owner, local);
+            }
+            catch { return false; }
+        }
+
+        static bool SameNativeInstance(GameObject a, GameObject b) =>
+            ReferenceEquals(a, b) || a.Pointer == b.Pointer;
+
+        public static void OnSceneInitialized()
+        {
+            lock (_lock) _slots.Clear();
+            _nextPlayerScanAt = 0f;
+        }
+
+        static void ScanLocalPlayerSlots(float now)
+        {
+            if (now < _nextPlayerScanAt) return;
+            _nextPlayerScanAt = now + 0.5f;
+            try
+            {
+                var icons = AbilityBarIcon.all;
+                if (icons == null) return;
+                for (int i = 0; i < icons.Count; i++)
+                {
+                    AbilityBarIcon icon = icons[i];
+                    if (icon != null && BelongsToLocalPlayer(icon)) Register(icon);
+                }
+            }
+            catch { }
+        }
 
         // The skill artwork, preferring an override sprite when the game set one.
         static Sprite ReadSprite(AbilityBarIcon icon)
@@ -152,7 +200,24 @@ namespace Mod.Cheats.CooldownTracker
                 lock (_lock)
                     foreach (var s in _slots)
                         if (s.SlotIndex == idx && SameNativeInstance(s.Source, icon))
-                        { s.OnCooldown = on; if (!on) s.Fill = 0f; break; }
+                        {
+                            if (on)
+                            {
+                                if (s.CooldownStateArmed)
+                                {
+                                    s.OnCooldown = true;
+                                    s.CooldownObservedSince = Time.time;
+                                }
+                            }
+                            else
+                            {
+                                s.CooldownStateArmed = true;
+                                s.OnCooldown = false;
+                                s.CooldownObservedSince = 0f;
+                                s.Fill = 0f;
+                            }
+                            break;
+                        }
             }
             catch { }
         }
@@ -161,6 +226,7 @@ namespace Mod.Cheats.CooldownTracker
         // rebuild label caches, and prune slots whose Unity objects died.
         public static void Tick(float now)
         {
+            ScanLocalPlayerSlots(now);
             lock (_lock)
             {
                 for (int i = _slots.Count - 1; i >= 0; i--)
@@ -170,6 +236,7 @@ namespace Mod.Cheats.CooldownTracker
                     try { alive = s.Source != null; }   // Unity-overloaded ==, true null for destroyed objects
                     catch { alive = false; }
                     if (!alive) { _slots.RemoveAt(i); continue; }
+                    if (!BelongsToLocalPlayer(s.Source)) { _slots.RemoveAt(i); continue; }
 
                     try
                     {
@@ -185,9 +252,21 @@ namespace Mod.Cheats.CooldownTracker
                             bool active = s.Source.cooldownBarActive;
                             if (!active && s.Fill > 0.01f) active = true;
                             if (active && s.Fill < 0.005f) active = false;
-                            if (active && !s.OnCooldown) s.CooldownObservedSince = now;
-                            if (!active) s.CooldownObservedSince = 0f;
-                            s.OnCooldown = active;
+                            if (!active)
+                            {
+                                s.CooldownStateArmed = true;
+                                s.CooldownObservedSince = 0f;
+                                s.OnCooldown = false;
+                            }
+                            else if (s.CooldownStateArmed)
+                            {
+                                if (!s.OnCooldown) s.CooldownObservedSince = now;
+                                s.OnCooldown = true;
+                            }
+                            else
+                            {
+                                s.OnCooldown = false;
+                            }
                         }
 
                         if (s.GameBoundKey == null && now >= s.NextHotkeyRetry)
@@ -235,7 +314,7 @@ namespace Mod.Cheats.CooldownTracker
             buf.Clear();
             lock (_lock)
                 foreach (var s in _slots)
-                    if (s.OnCooldown && s.Fill > 0.005f && Time.time - s.CooldownObservedSince >= 0.35f
+                    if (s.CooldownStateArmed && s.OnCooldown && s.Fill > 0.005f && Time.time - s.CooldownObservedSince >= 0.35f
                         && Prefs.IsSlotEnabled(s.SlotIndex))
                         buf.Add(s);
         }

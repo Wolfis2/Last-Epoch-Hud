@@ -368,6 +368,21 @@ namespace Mod
 			Settings.showBossMonsters = _showBossMonsters!.Value;
 			Settings.showUniqueMonsters = _showUniqueMonsters!.Value;
 			Settings.minimapCircleOpacity = Clamp(_minimapCircleOpacity!.Value, 0.05f, 1f);
+			bool previousMarkerDefaults =
+				_minimapNormalCircleSize!.Value == 6f && _minimapMagicCircleSize!.Value == 6f &&
+				_minimapRareCircleSize!.Value == 6f && _minimapUniqueCircleSize!.Value == 6f &&
+				_minimapBossCircleSize!.Value == 6f && _minimapCircleOpacity!.Value == 0.9f &&
+				_minimapNormalCircleColor!.Value == "E53935" && _minimapMagicCircleColor!.Value == "3588FF" &&
+				_minimapRareCircleColor!.Value == "F5D328" && _minimapUniqueCircleColor!.Value == "F28C28" &&
+				_minimapBossCircleColor!.Value == "F28C28";
+			if (previousMarkerDefaults)
+			{
+				_minimapNormalCircleSize!.Value = Settings.minimapNormalCircleSize;
+				_minimapMagicCircleSize!.Value = Settings.minimapMagicCircleSize;
+				_minimapRareCircleSize!.Value = Settings.minimapRareCircleSize;
+				_minimapUniqueCircleSize!.Value = Settings.minimapUniqueCircleSize;
+				_minimapBossCircleSize!.Value = Settings.minimapBossCircleSize;
+			}
 			Settings.minimapNormalCircleSize = Clamp(_minimapNormalCircleSize!.Value, 2f, 24f);
 			Settings.minimapMagicCircleSize = Clamp(_minimapMagicCircleSize!.Value, 2f, 24f);
 			Settings.minimapRareCircleSize = Clamp(_minimapRareCircleSize!.Value, 2f, 24f);

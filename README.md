@@ -4,7 +4,7 @@ LEHud is a MelonLoader mod for Last Epoch. It adds an in-game HUD with configura
 
 ## Inventory tools
 
-The F10/Insert menu includes an **Inventory** tab for configuring inventory-panel buttons and quick teleport. Waypoint controllers are primed automatically after scene initialization and retried until ready. The buttons are added to the game's inventory panel and include **STASH**, **STASH ALL**, **VENDOR** (off by default), and **Quick Teleport**. Teleport options are restricted to waypoints unlocked by the character.
+The F10/Insert menu includes an **Inventory** tab for configuring inventory-panel buttons and quick teleport. Waypoint controllers and character unlock state are initialized from game data at scene start; validated travel enables the current-zone waypoint manager before using the game's native waypoint load. The buttons are added to the game's inventory panel and include **STASH**, **STASH ALL**, **VENDOR** (off by default), and **Quick Teleport**. Teleport options remain restricted to waypoints unlocked by the character.
 
 The inventory implementation is adapted from [MedicK's Advanced Inventory / Terrible Inventory](https://github.com/medick51o/LastEpoch-Mods/tree/main/medick_Advanced_Inventory), used under its MIT permission; attribution and license text are in `Mod/Cheats/Inventory/THIRD_PARTY_NOTICES.md`.
 
@@ -12,9 +12,9 @@ The inventory implementation is adapted from [MedicK's Advanced Inventory / Terr
 
 ## Cooldown tracker
 
-The **Cooldowns** tab integrates MedicK's Terrible Cooldowns: live skill artwork above the character during cooldowns, console-style input badges, keyboard/controller detection, per-slot tracking, and per-input-mode labels and glyph selection. Display and behavior settings are in the tab; there is no separate Home-key settings panel. The LEHud window and controls use the tracker's charcoal-and-gold visual theme, with a top-right close button and mouse input capture over the window. Existing tracker preference names are retained. Attribution and license details are in `Mod/Cheats/CooldownTracker/THIRD_PARTY_NOTICES.md`.
+The **Cooldowns** tab integrates MedicK's Terrible Cooldowns: local-player skill artwork above the character during cooldowns, console-style input badges, keyboard/controller detection, per-slot tracking, and per-input-mode labels and glyph selection. Startup/non-player ability-bar icons are ignored; a skill must be observed ready before its next cooldown can draw. Display and behavior settings are in the tab; there is no separate Home-key settings panel. The LEHud window and controls use the tracker's charcoal-and-gold visual theme, with a top-right close button and mouse input capture over the window. Existing tracker preference names are retained. Attribution and license details are in `Mod/Cheats/CooldownTracker/THIRD_PARTY_NOTICES.md`.
 
-The **Gameplay** tab includes minimap marker controls for Normal, Magic, Rare, Unique, and Boss monsters: independent sizes and hex colors, plus a shared opacity setting. Default marker colors are red, blue, yellow, and orange for Unique/Boss.
+The **Gameplay** tab includes minimap marker controls for Normal, Magic, Rare, Unique, and Boss monsters: independent sizes and hex colors, plus a shared opacity setting. Default sizes are 6/8/10/12/16 px; colors are red, blue, yellow, and orange for Unique/Boss.
 
 ## Requirements
 

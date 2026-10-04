@@ -19,6 +19,7 @@ internal static partial class CooldownTracker
     public static void OnSceneInitialized()
     {
         _iconsVisibleAfter = Time.time + 2f;
+        SlotRegistry.OnSceneInitialized();
     }
 
     public static void Initialize()

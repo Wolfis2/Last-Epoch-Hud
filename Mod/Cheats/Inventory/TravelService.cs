@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Il2Cpp;
 using MelonLoader;
+using Mod.Game;
 using UnityEngine;
 
 namespace Mod.Cheats.Inventory
@@ -82,6 +83,7 @@ namespace Mod.Cheats.Inventory
             // One scene scan per click, shared by the gate and the lookup
             // (FindObjectsOfType over a big town scene is hitch-prone on Deck).
             UIWaypointController[] controllers = FindControllers();
+            RefreshWaypointStates(controllers);
             UIWaypointStandard wp = FindWaypointForScene(controllers, scene);
 
             // SPEC travel rule 4: waypoint miss → re-run the primer ONCE,
@@ -101,6 +103,7 @@ namespace Mod.Cheats.Inventory
                     w2 += 0.25f;
                 }
                 controllers = FindControllers();
+                RefreshWaypointStates(controllers);
                 wp = FindWaypointForScene(controllers, scene);
             }
 
@@ -132,11 +135,12 @@ namespace Mod.Cheats.Inventory
                 float unlockWaited = 0f;
                 while (unlockWaited < 10f)
                 {
+                    yield return new WaitForSeconds(0.5f);
+                    unlockWaited += 0.5f;
                     controllers = FindControllers();
+                    RefreshWaypointStates(controllers);
                     wp = FindWaypointForScene(controllers, scene);
                     if (wp != null && IsUnlocked(controllers, scene, wp)) break;
-                    yield return new WaitForSeconds(0.25f);
-                    unlockWaited += 0.25f;
                 }
                 if (wp == null || !IsUnlocked(controllers, scene, wp))
                 {
@@ -146,7 +150,23 @@ namespace Mod.Cheats.Inventory
                 }
             }
 
-            // Council A2: use the verified waypoint-click path without mutating WaypointManager state.
+            float managerWaited = 0f;
+            bool waypointManagerReady = false;
+            while (!waypointManagerReady && managerWaited < 10f)
+            {
+                waypointManagerReady = EnableWaypointForTravel();
+                if (waypointManagerReady) break;
+                yield return new WaitForSeconds(0.25f);
+                managerWaited += 0.25f;
+            }
+            if (!waypointManagerReady)
+            {
+                MelonLogger.Warning("waypoint manager was not ready after 10 seconds; travel cancelled");
+                _travelInProgress = false;
+                yield break;
+            }
+
+            // Use the verified game waypoint path after setting its per-zone enable state.
             bool fired = false;
             try
             {
@@ -200,6 +220,12 @@ namespace Mod.Cheats.Inventory
 
         static bool IsUnlocked(UIWaypointController[] all, string scene, UIWaypointStandard waypoint)
         {
+            try
+            {
+                if (waypoint.alwaysUnlocked || waypoint.isActive || waypoint.playerIsHere) return true;
+            }
+            catch { }
+
             bool readAnything = false;
             if (all != null)
             {
@@ -249,6 +275,80 @@ namespace Mod.Cheats.Inventory
                 return false;
             }
             return false;
+        }
+
+        static void RefreshWaypointStates(UIWaypointController[] all)
+        {
+            if (all == null) return;
+            MonolithProgressManager monolithProgress = null;
+            try { monolithProgress = UnityEngine.Object.FindObjectOfType<MonolithProgressManager>(true); } catch { }
+            var localUnlockedScenes = GetLocalUnlockedScenes();
+
+            foreach (UIWaypointController controller in all)
+            {
+                try
+                {
+                    controller.GetAllWaypoints();
+                    var unlockedScenes = localUnlockedScenes ?? controller.unlockedScenes;
+                    var waypoints = controller.waypointsInMenu;
+                    if (unlockedScenes == null || waypoints == null) continue;
+                    for (int i = 0; i < waypoints.Count; i++)
+                    {
+                        try
+                        {
+                            UIWaypoint waypoint = waypoints[i];
+                            if (waypoint != null)
+                                waypoint.CheckWaypoint(unlockedScenes, monolithProgress);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        static Il2CppSystem.Collections.Generic.List<string> GetLocalUnlockedScenes()
+        {
+            try
+            {
+                GameObject localPlayer = ObjectManager.GetLocalPlayer();
+                var trackers = CharacterDataTracker.all;
+                if (localPlayer == null || trackers == null) return null;
+
+                for (int i = 0; i < trackers.Count; i++)
+                {
+                    try
+                    {
+                        CharacterDataTracker tracker = trackers[i];
+                        if (tracker == null || tracker.actor == null) continue;
+                        GameObject owner = tracker.actor.gameObject;
+                        if (owner != null &&
+                            (ReferenceEquals(owner, localPlayer) || owner.Pointer == localPlayer.Pointer))
+                            return tracker.getUnlockedScenes();
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        static bool EnableWaypointForTravel()
+        {
+            try
+            {
+                var manager = WaypointManager.instance;
+                if (manager == null) return false;
+                manager.WaypointEnabled = true;
+                manager.EnableWaypoint();
+                Dbg.Log("enabled current-zone waypoint travel after destination passed unlock check");
+                return true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Warning($"could not enable waypoint travel state: {e.Message}");
+                return false;
+            }
         }
 
         // ── Waypoint lookup ───────────────────────────────────────

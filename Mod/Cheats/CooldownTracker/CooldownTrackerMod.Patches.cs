@@ -11,11 +11,20 @@ namespace Mod.Cheats.CooldownTracker
     // AbilityBarIcon is the game's real action-bar slot component
     // (fields: icon, cooldownBar, cooldownBarActive, abilityNumber, player).
     // Note: no patch on Start — it was removed from the game in Season 4 and
-    // patching it breaks loading; Awake covers registration.
+    // patching it breaks loading. Awake and OnPlayerChanged cover registration
+    // when the local-player owner is assigned before or after construction.
     internal static partial class CooldownTracker
     {
         [HarmonyPatch(typeof(AbilityBarIcon), "Awake")]
         private static class Patch_AbilityBarAwake
+        {
+            [HarmonyPostfix]
+            public static void Postfix(AbilityBarIcon __instance) =>
+                SlotRegistry.Register(__instance);
+        }
+
+        [HarmonyPatch(typeof(AbilityBarIcon), "OnPlayerChanged")]
+        private static class Patch_AbilityBarPlayerChanged
         {
             [HarmonyPostfix]
             public static void Postfix(AbilityBarIcon __instance) =>

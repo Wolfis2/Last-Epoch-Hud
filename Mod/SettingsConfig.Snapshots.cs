@@ -67,10 +67,10 @@ namespace Mod
 			public bool showUniqueMonsters { get; set; } = true;
 			public float minimapCircleOpacity { get; set; } = 0.9f;
 			public float minimapNormalCircleSize { get; set; } = 6f;
-			public float minimapMagicCircleSize { get; set; } = 6f;
-			public float minimapRareCircleSize { get; set; } = 6f;
-			public float minimapUniqueCircleSize { get; set; } = 6f;
-			public float minimapBossCircleSize { get; set; } = 6f;
+			public float minimapMagicCircleSize { get; set; } = 8f;
+			public float minimapRareCircleSize { get; set; } = 10f;
+			public float minimapUniqueCircleSize { get; set; } = 12f;
+			public float minimapBossCircleSize { get; set; } = 16f;
 			public string minimapNormalCircleColor { get; set; } = "E53935";
 			public string minimapMagicCircleColor { get; set; } = "3588FF";
 			public string minimapRareCircleColor { get; set; } = "F5D328";
@@ -269,16 +269,23 @@ namespace Mod
 			Settings.showBossMonsters = s.showBossMonsters;
 			Settings.showUniqueMonsters = s.showUniqueMonsters;
 			Settings.minimapCircleOpacity = Clamp(s.minimapCircleOpacity, 0.05f, 1f);
-			Settings.minimapNormalCircleSize = Clamp(s.minimapNormalCircleSize, 2f, 24f);
-			Settings.minimapMagicCircleSize = Clamp(s.minimapMagicCircleSize, 2f, 24f);
-			Settings.minimapRareCircleSize = Clamp(s.minimapRareCircleSize, 2f, 24f);
-			Settings.minimapUniqueCircleSize = Clamp(s.minimapUniqueCircleSize, 2f, 24f);
-			Settings.minimapBossCircleSize = Clamp(s.minimapBossCircleSize, 2f, 24f);
 			Settings.minimapNormalCircleColor = s.minimapNormalCircleColor ?? "E53935";
 			Settings.minimapMagicCircleColor = s.minimapMagicCircleColor ?? "3588FF";
 			Settings.minimapRareCircleColor = s.minimapRareCircleColor ?? "F5D328";
 			Settings.minimapUniqueCircleColor = s.minimapUniqueCircleColor ?? "F28C28";
 			Settings.minimapBossCircleColor = s.minimapBossCircleColor ?? "F28C28";
+			bool previousMarkerDefaults =
+				s.minimapNormalCircleSize == 6f && s.minimapMagicCircleSize == 6f &&
+				s.minimapRareCircleSize == 6f && s.minimapUniqueCircleSize == 6f &&
+				s.minimapBossCircleSize == 6f && s.minimapCircleOpacity == 0.9f &&
+				Settings.minimapNormalCircleColor == "E53935" && Settings.minimapMagicCircleColor == "3588FF" &&
+				Settings.minimapRareCircleColor == "F5D328" && Settings.minimapUniqueCircleColor == "F28C28" &&
+				Settings.minimapBossCircleColor == "F28C28";
+			Settings.minimapNormalCircleSize = previousMarkerDefaults ? 6f : Clamp(s.minimapNormalCircleSize, 2f, 24f);
+			Settings.minimapMagicCircleSize = previousMarkerDefaults ? 8f : Clamp(s.minimapMagicCircleSize, 2f, 24f);
+			Settings.minimapRareCircleSize = previousMarkerDefaults ? 10f : Clamp(s.minimapRareCircleSize, 2f, 24f);
+			Settings.minimapUniqueCircleSize = previousMarkerDefaults ? 12f : Clamp(s.minimapUniqueCircleSize, 2f, 24f);
+			Settings.minimapBossCircleSize = previousMarkerDefaults ? 16f : Clamp(s.minimapBossCircleSize, 2f, 24f);
 			Settings.minimapOffsetX = Clamp(s.minimapOffsetX, -1000f, 1000f);
 			Settings.minimapOffsetY = Clamp(s.minimapOffsetY, -1000f, 1000f);
 			Settings.minimapFullscreenScaleCorrection = Clamp(s.minimapFullscreenScaleCorrection, 0.01f, 2f);
