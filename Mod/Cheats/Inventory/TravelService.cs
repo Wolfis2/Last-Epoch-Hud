@@ -2,6 +2,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
 using Mod.Game;
@@ -21,12 +23,29 @@ namespace Mod.Cheats.Inventory
     //    buttons for "VISIT X") is DELETED. Prime-then-retry replaces it.
     internal static class TravelService
     {
+        static readonly string[] _routeNames =
+        {
+            "Map button action",
+            "Map quickTravel",
+            "Quick-travel prompt",
+            "Waypoint QuickTravel",
+            "Waypoint LoadWaypointScene"
+        };
         static bool _travelInProgress;
         static bool _primed;
         static bool _primerRunning;
         static bool _unlockUnreadableWarned;
         static float _nextPrimeRetryAt;
+        static int _routeIndex;
+        static int _sceneLoadSequence;
         static readonly HashSet<string> _warnedScenes = new();
+
+        public static string[] RouteNames => _routeNames;
+        public static int RouteIndex
+        {
+            get => _routeIndex;
+            set => _routeIndex = Mathf.Clamp(value, 0, _routeNames.Length - 1);
+        }
 
         public static void EnsurePrimed()
         {
@@ -38,8 +57,11 @@ namespace Mod.Cheats.Inventory
         // The travel guard spans the whole scene transition (safety rule #3:
         // concurrent travel once summoned EHG's bug reporter) — it is cleared
         // here on scene load, with a timeout failsafe inside TravelCoroutine.
-        public static void NotifySceneLoaded()
+        public static void NotifySceneLoaded(string sceneName)
         {
+            _sceneLoadSequence++;
+            if (_travelInProgress)
+                MelonLogger.Msg($"[LEHud] Quick teleport observed scene load: {sceneName}");
             _travelInProgress = false;
             _primed = false;
             _nextPrimeRetryAt = 0f;
@@ -69,7 +91,8 @@ namespace Mod.Cheats.Inventory
         static IEnumerator TravelCoroutine(string scene)
         {
             _travelInProgress = true;
-            Dbg.Log($"travel requested: '{scene}'");
+            int selectedRoute = _routeIndex;
+            MelonLogger.Msg($"[LEHud] Quick teleport route selected: {_routeNames[selectedRoute]}");
 
             EnsurePrimed();
             float waited = 0f;
@@ -166,24 +189,13 @@ namespace Mod.Cheats.Inventory
                 yield break;
             }
 
-            // Match the normal map flow: bind the hidden waypoint to the
-            // existing panel, select the destination, then invoke its travel
-            // button handler. Do not activate or display the map hierarchy.
+            int startSequence = _sceneLoadSequence;
             bool fired = false;
             try
             {
-                MapPanel panel = wp._mapPanel;
-                if (panel == null)
-                    panel = UnityEngine.Object.FindObjectOfType<MapPanel>(true);
-                if (panel == null)
-                    throw new InvalidOperationException("MapPanel instance was not found");
-
-                wp._mapPanel = panel;
-                panel.focusedSceneID = wp.sceneName;
-                wp.SelectSceneLocation();
-                panel.PerformTravelButtonAction();
+                InvokeTravelRoute(selectedRoute, wp, scene);
                 fired = true;
-                MelonLogger.Msg($"[LEHud] Quick teleport submitted through MapPanel.PerformTravelButtonAction: {scene}");
+                MelonLogger.Msg($"[LEHud] Quick teleport route returned: {_routeNames[selectedRoute]}");
             }
             catch (Exception e)
             {
@@ -201,10 +213,61 @@ namespace Mod.Cheats.Inventory
             float guard = 0f;
             while (_travelInProgress && guard < 10f)
             {
+                if (guard == 4f && _sceneLoadSequence == startSequence)
+                    MelonLogger.Warning($"[LEHud] Route '{_routeNames[selectedRoute]}' returned but no scene load was observed after 4 seconds.");
                 yield return new WaitForSeconds(0.5f);
                 guard += 0.5f;
             }
+            if (_sceneLoadSequence == startSequence)
+                MelonLogger.Warning($"[LEHud] Route '{_routeNames[selectedRoute]}' ended without a scene transition.");
             _travelInProgress = false;
+        }
+
+        static void InvokeTravelRoute(int route, UIWaypointStandard waypoint, string scene)
+        {
+            MapPanel panel = waypoint._mapPanel;
+            if (panel == null)
+                panel = UnityEngine.Object.FindObjectOfType<MapPanel>(true);
+            if (panel == null)
+                throw new InvalidOperationException("MapPanel instance was not found");
+
+            string panelState = "unreadable";
+            try
+            {
+                var button = panel.travelButton;
+                panelState = $"active={panel.gameObject.activeInHierarchy}, enabled={panel.enabled}, " +
+                    $"initialized={panel.initComplete}, blocked={panel.mapTransitionBlocked}, " +
+                    $"focused='{panel.focusedSceneID}', buttonInteractable={(button != null && button.interactable)}, " +
+                    $"waypointActive={waypoint.isActive}, waypointButton={(waypoint.waypointButton != null && waypoint.waypointButton.interactable)}";
+            }
+            catch (Exception e) { panelState = $"state read failed: {e.Message}"; }
+            MelonLogger.Msg($"[LEHud] Quick teleport context: route={_routeNames[route]}, scene={scene}, {panelState}");
+
+            waypoint._mapPanel = panel;
+            switch (route)
+            {
+                case 0:
+                    panel.focusedSceneID = waypoint.sceneName;
+                    waypoint.SelectSceneLocation();
+                    panel.PerformTravelButtonAction();
+                    break;
+                case 1:
+                {
+                    MethodInfo method = AccessTools.Method(typeof(MapPanel), "quickTravel", new[] { typeof(string) });
+                    if (method == null) throw new MissingMethodException("MapPanel.quickTravel(string)");
+                    method.Invoke(panel, new object[] { scene });
+                    break;
+                }
+                case 2:
+                    panel.openQuickTravelWindow(scene);
+                    break;
+                case 3:
+                    waypoint.QuickTravel();
+                    break;
+                default:
+                    waypoint.LoadWaypointScene();
+                    break;
+            }
         }
 
         static UIWaypointController[] FindControllers()
