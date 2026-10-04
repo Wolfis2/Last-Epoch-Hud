@@ -204,15 +204,7 @@ namespace Mod.Cheats.Inventory
 
         static bool IsPlayableScene()
         {
-            try
-            {
-                string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ?? "";
-                string name = scene.ToLowerInvariant();
-                return scene.Length > 0 && !name.Contains("loading") && !name.Contains("menu")
-                    && !name.Contains("boot") && !name.Contains("splash")
-                    && !name.Contains("character") && !name.Contains("login");
-            }
-            catch { return false; }
+            return ObjectManager.HasPlayer();
         }
 
         // ── Unlock gate ───────────────────────────────────────────
