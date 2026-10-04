@@ -166,13 +166,13 @@ namespace Mod.Cheats.Inventory
                 yield break;
             }
 
-            // Use the verified game waypoint path after setting its per-zone enable state.
+            // Use the game's dedicated quick-travel path after validating the target.
             bool fired = false;
             try
             {
-                wp.LoadWaypointScene();
+                wp.QuickTravel();
                 fired = true;
-                MelonLogger.Msg($"[LEHud] Quick teleport submitted to the native waypoint loader: {scene}");
+                MelonLogger.Msg($"[LEHud] Quick teleport submitted through UIWaypointStandard.QuickTravel: {scene}");
             }
             catch (Exception e)
             {
