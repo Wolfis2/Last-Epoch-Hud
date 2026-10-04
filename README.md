@@ -14,6 +14,8 @@ The inventory implementation is adapted from [MedicK's Advanced Inventory / Terr
 
 The **Cooldowns** tab integrates MedicK's Terrible Cooldowns: live skill artwork above the character during cooldowns, console-style input badges, keyboard/controller detection, per-slot tracking, and per-input-mode labels and glyph selection. Display and behavior settings are in the tab; there is no separate Home-key settings panel. The LEHud window and controls use the tracker's charcoal-and-gold visual theme, with a top-right close button and mouse input capture over the window. Existing tracker preference names are retained. Attribution and license details are in `Mod/Cheats/CooldownTracker/THIRD_PARTY_NOTICES.md`.
 
+The **Gameplay** tab includes minimap marker controls for Normal, Magic, Rare, Unique, and Boss monsters: independent sizes and hex colors, plus a shared opacity setting. Default marker colors are red, blue, yellow, and orange for Unique/Boss.
+
 ## Requirements
 
 - Last Epoch

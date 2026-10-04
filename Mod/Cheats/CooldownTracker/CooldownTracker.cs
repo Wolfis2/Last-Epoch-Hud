@@ -8,12 +8,18 @@ namespace Mod.Cheats.CooldownTracker;
 internal static partial class CooldownTracker
 {
     static float _tick;
+    static float _iconsVisibleAfter = float.PositiveInfinity;
     const float TickRate = 0.05f;
 
     public static bool ShouldBlockGameInput =>
         Menu.IsCooldownsTabActive &&
         (Prefs.LockInput.Value || UiState.TextFieldActive || UiState.MoveIcons);
     public static float SettingsContentHeight => SettingsPanel.ContentHeight;
+
+    public static void OnSceneInitialized()
+    {
+        _iconsVisibleAfter = Time.time + 2f;
+    }
 
     public static void Initialize()
     {
@@ -36,6 +42,7 @@ internal static partial class CooldownTracker
     public static void DrawOverlay()
     {
         Theme.Ensure();
+        if (Time.time < _iconsVisibleAfter) return;
         OverheadRenderer.Draw();
     }
 

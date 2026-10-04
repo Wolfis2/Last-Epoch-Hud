@@ -64,6 +64,18 @@ namespace Mod
 			public bool showRareMonsters { get; set; }
 			public bool showWhiteMonsters { get; set; }
 			public bool showBossMonsters { get; set; }
+			public bool showUniqueMonsters { get; set; } = true;
+			public float minimapCircleOpacity { get; set; } = 0.9f;
+			public float minimapNormalCircleSize { get; set; } = 6f;
+			public float minimapMagicCircleSize { get; set; } = 6f;
+			public float minimapRareCircleSize { get; set; } = 6f;
+			public float minimapUniqueCircleSize { get; set; } = 6f;
+			public float minimapBossCircleSize { get; set; } = 6f;
+			public string minimapNormalCircleColor { get; set; } = "E53935";
+			public string minimapMagicCircleColor { get; set; } = "3588FF";
+			public string minimapRareCircleColor { get; set; } = "F5D328";
+			public string minimapUniqueCircleColor { get; set; } = "F28C28";
+			public string minimapBossCircleColor { get; set; } = "F28C28";
 			public float minimapOffsetX { get; set; }
 			public float minimapOffsetY { get; set; }
 			public float minimapFullscreenScaleCorrection { get; set; } = 0.1422f;
@@ -153,6 +165,18 @@ namespace Mod
 				showRareMonsters = Settings.showRareMonsters,
 				showWhiteMonsters = Settings.showWhiteMonsters,
 				showBossMonsters = Settings.showBossMonsters,
+				showUniqueMonsters = Settings.showUniqueMonsters,
+				minimapCircleOpacity = Settings.minimapCircleOpacity,
+				minimapNormalCircleSize = Settings.minimapNormalCircleSize,
+				minimapMagicCircleSize = Settings.minimapMagicCircleSize,
+				minimapRareCircleSize = Settings.minimapRareCircleSize,
+				minimapUniqueCircleSize = Settings.minimapUniqueCircleSize,
+				minimapBossCircleSize = Settings.minimapBossCircleSize,
+				minimapNormalCircleColor = Settings.minimapNormalCircleColor,
+				minimapMagicCircleColor = Settings.minimapMagicCircleColor,
+				minimapRareCircleColor = Settings.minimapRareCircleColor,
+				minimapUniqueCircleColor = Settings.minimapUniqueCircleColor,
+				minimapBossCircleColor = Settings.minimapBossCircleColor,
 				minimapOffsetX = Settings.minimapOffsetX,
 				minimapOffsetY = Settings.minimapOffsetY,
 				minimapFullscreenScaleCorrection = Settings.minimapFullscreenScaleCorrection,
@@ -243,6 +267,18 @@ namespace Mod
 			Settings.showRareMonsters = s.showRareMonsters;
 			Settings.showWhiteMonsters = s.showWhiteMonsters;
 			Settings.showBossMonsters = s.showBossMonsters;
+			Settings.showUniqueMonsters = s.showUniqueMonsters;
+			Settings.minimapCircleOpacity = Clamp(s.minimapCircleOpacity, 0.05f, 1f);
+			Settings.minimapNormalCircleSize = Clamp(s.minimapNormalCircleSize, 2f, 24f);
+			Settings.minimapMagicCircleSize = Clamp(s.minimapMagicCircleSize, 2f, 24f);
+			Settings.minimapRareCircleSize = Clamp(s.minimapRareCircleSize, 2f, 24f);
+			Settings.minimapUniqueCircleSize = Clamp(s.minimapUniqueCircleSize, 2f, 24f);
+			Settings.minimapBossCircleSize = Clamp(s.minimapBossCircleSize, 2f, 24f);
+			Settings.minimapNormalCircleColor = s.minimapNormalCircleColor ?? "E53935";
+			Settings.minimapMagicCircleColor = s.minimapMagicCircleColor ?? "3588FF";
+			Settings.minimapRareCircleColor = s.minimapRareCircleColor ?? "F5D328";
+			Settings.minimapUniqueCircleColor = s.minimapUniqueCircleColor ?? "F28C28";
+			Settings.minimapBossCircleColor = s.minimapBossCircleColor ?? "F28C28";
 			Settings.minimapOffsetX = Clamp(s.minimapOffsetX, -1000f, 1000f);
 			Settings.minimapOffsetY = Clamp(s.minimapOffsetY, -1000f, 1000f);
 			Settings.minimapFullscreenScaleCorrection = Clamp(s.minimapFullscreenScaleCorrection, 0.01f, 2f);

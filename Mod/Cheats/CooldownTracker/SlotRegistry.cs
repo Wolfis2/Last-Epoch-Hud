@@ -16,6 +16,7 @@ namespace Mod.Cheats.CooldownTracker
         public Image  CooldownBar;
         public float  Fill;
         public bool   OnCooldown;
+        public float  CooldownObservedSince;
         public AbilityBarIcon Source;
 
         // Render cache — rebuilt only when the resolved label changes, so the
@@ -52,6 +53,7 @@ namespace Mod.Cheats.CooldownTracker
             try
             {
                 int idx = icon.abilityNumber;
+                if ((uint)idx >= SlotCount) return;
                 var s = new SlotData
                 {
                     SlotIndex    = idx,
@@ -59,6 +61,7 @@ namespace Mod.Cheats.CooldownTracker
                     Icon         = ReadSprite(icon),
                     CooldownBar  = icon.cooldownBar,
                     OnCooldown   = icon.cooldownBarActive,
+                    CooldownObservedSince = icon.cooldownBarActive ? Time.time : 0f,
                     Source       = icon,
                 };
                 RefreshLabel(s);
@@ -145,9 +148,10 @@ namespace Mod.Cheats.CooldownTracker
             try
             {
                 int idx = icon.abilityNumber;
+                if ((uint)idx >= SlotCount) return;
                 lock (_lock)
                     foreach (var s in _slots)
-                        if (s.SlotIndex == idx)
+                        if (s.SlotIndex == idx && SameNativeInstance(s.Source, icon))
                         { s.OnCooldown = on; if (!on) s.Fill = 0f; break; }
             }
             catch { }
@@ -177,10 +181,13 @@ namespace Mod.Cheats.CooldownTracker
 
                         if (s.CooldownBar != null)
                         {
-                            s.Fill       = s.CooldownBar.fillAmount;
-                            s.OnCooldown = s.Source.cooldownBarActive;
-                            if (!s.OnCooldown && s.Fill > 0.01f)  s.OnCooldown = true;
-                            if (s.OnCooldown  && s.Fill < 0.005f) s.OnCooldown = false;
+                            s.Fill = s.CooldownBar.fillAmount;
+                            bool active = s.Source.cooldownBarActive;
+                            if (!active && s.Fill > 0.01f) active = true;
+                            if (active && s.Fill < 0.005f) active = false;
+                            if (active && !s.OnCooldown) s.CooldownObservedSince = now;
+                            if (!active) s.CooldownObservedSince = 0f;
+                            s.OnCooldown = active;
                         }
 
                         if (s.GameBoundKey == null && now >= s.NextHotkeyRetry)
@@ -228,7 +235,8 @@ namespace Mod.Cheats.CooldownTracker
             buf.Clear();
             lock (_lock)
                 foreach (var s in _slots)
-                    if (s.OnCooldown && s.Fill > 0.005f && Prefs.IsSlotEnabled(s.SlotIndex))
+                    if (s.OnCooldown && s.Fill > 0.005f && Time.time - s.CooldownObservedSince >= 0.35f
+                        && Prefs.IsSlotEnabled(s.SlotIndex))
                         buf.Add(s);
         }
 

@@ -41,6 +41,8 @@ namespace Mod.Cheats.CooldownTracker
         public static GUIStyle Panel, Card, InsetBox, SwitchOn, SwitchOff;
         static GUIStyle _btn, _btnSelected, _btnDanger, _textField, _label, _iconLabel, _badgeLabel;
         static GUIStyle _sliderThumb;
+        static GUIStyle _optionRow;
+        static GUIStyle _optionRowSelected;
         static GUISkin _hudSkin;
         public static Texture2D Disc { get; private set; }
         static Font _serif;
@@ -59,6 +61,8 @@ namespace Mod.Cheats.CooldownTracker
             Panel     = BoxStyle(Bg,      Border);
             Card      = BoxStyle(Surface, Border);
             InsetBox  = BoxStyle(Inset,   Border);
+            _optionRow = BoxStyle(Surface, Border);
+            _optionRowSelected = BoxStyle(SurfaceHi, AccentDim);
             SwitchOn  = BoxStyle(Accent,  AccentDim);
             SwitchOff = BoxStyle(Inset,   Border);
 
@@ -252,6 +256,8 @@ namespace Mod.Cheats.CooldownTracker
             _fields[fontSize] = st;
             return st;
         }
+
+        public static GUIStyle OptionRow(bool selected) => selected ? _optionRowSelected : _optionRow;
 
         public static GUIStyle SliderThumb(float sc)
         {

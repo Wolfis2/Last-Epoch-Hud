@@ -72,6 +72,7 @@ namespace Mod;
 
 		public override void OnSceneWasInitialized(int buildindex, string sceneName) // Runs when a Scene has Initialized and is passed the Scene's Build Index and Name.
 		{
+			CooldownTrackerRuntime.OnSceneInitialized();
 			//MelonLogger.Msg("OnSceneWasInitialized: " + buildindex.ToString() + " | " + sceneName);
 
 			//foreach (MethodInfo mi in typeof(UnityEngine.Physics)

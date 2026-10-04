@@ -128,16 +128,16 @@ namespace Mod
 			specialsSubDropdown = DrawSubmenuToggle(specialsSubDropdown, "Specials");
 			if (specialsSubDropdown)
 			{
-				Settings.espShowLootLizards = GUILayout.Toggle(Settings.espShowLootLizards, "Show Loot Lizards");
-				Settings.espShowChampions = GUILayout.Toggle(Settings.espShowChampions, "Show Champions");
-				Settings.espShowOmens = GUILayout.Toggle(Settings.espShowOmens, "Show Omens");
-				Settings.espShowChests = GUILayout.Toggle(Settings.espShowChests, "Show Chests");
-				Settings.espShowShrines = GUILayout.Toggle(Settings.espShowShrines, "Show Shrines");
-				Settings.espShowRunePrisons = GUILayout.Toggle(Settings.espShowRunePrisons, "Show Rune Prisons");
+					Settings.espShowLootLizards = DrawOptionToggle(Settings.espShowLootLizards, "Show Loot Lizards");
+					Settings.espShowChampions = DrawOptionToggle(Settings.espShowChampions, "Show Champions");
+					Settings.espShowOmens = DrawOptionToggle(Settings.espShowOmens, "Show Omens");
+					Settings.espShowChests = DrawOptionToggle(Settings.espShowChests, "Show Chests");
+					Settings.espShowShrines = DrawOptionToggle(Settings.espShowShrines, "Show Shrines");
+					Settings.espShowRunePrisons = DrawOptionToggle(Settings.espShowRunePrisons, "Show Rune Prisons");
 
 				GUILayout.Space(6f);
-				Settings.showESPLines = GUILayout.Toggle(Settings.showESPLines, "Show ESP Lines");
-				Settings.showESPLabels = GUILayout.Toggle(Settings.showESPLabels, "Show ESP Labels");
+					Settings.showESPLines = DrawOptionToggle(Settings.showESPLines, "Show ESP Lines");
+					Settings.showESPLabels = DrawOptionToggle(Settings.showESPLabels, "Show ESP Labels");
 
 				GUILayout.Label("Chest ESP Vertical Cull (m): " + Settings.espVerticalCullMeters.ToString("F0"));
 				Settings.espVerticalCullMeters = GUILayout.HorizontalSlider(Settings.espVerticalCullMeters, 0f, 200f);
@@ -148,7 +148,7 @@ namespace Mod
 			{
 				foreach (KeyValuePair<string, bool> entry in Settings.npcDrawings)
 				{
-					bool result = GUILayout.Toggle(entry.Value, entry.Key);
+					bool result = DrawOptionToggle(entry.Value, entry.Key);
 					if (result != entry.Value)
 					{
 						Settings.npcDrawings[entry.Key] = result;
@@ -161,7 +161,7 @@ namespace Mod
 			{
 				foreach (KeyValuePair<string, bool> entry in Settings.npcClassifications)
 				{
-					bool result = GUILayout.Toggle(entry.Value, entry.Key);
+					bool result = DrawOptionToggle(entry.Value, entry.Key);
 					if (result != entry.Value)
 					{
 						Settings.npcClassifications[entry.Key] = result;
@@ -173,7 +173,7 @@ namespace Mod
 			if (itemDrawingsDropdown)
 			{
 				bool lootFilterEnabled = Settings.useLootFilter;
-				Settings.useLootFilter = GUILayout.Toggle(Settings.useLootFilter, "Use Loot Filter");
+				Settings.useLootFilter = DrawOptionToggle(Settings.useLootFilter, "Use Loot Filter");
 				if (lootFilterEnabled)
 				{
 					GUI.enabled = false;
@@ -183,7 +183,7 @@ namespace Mod
 				{
 					if (!lootFilterEnabled)
 					{
-						bool result = GUILayout.Toggle(entry.Value, entry.Key);
+						bool result = DrawOptionToggle(entry.Value, entry.Key);
 						if (result != entry.Value)
 						{
 							Settings.itemDrawings[entry.Key] = result;
@@ -203,7 +203,7 @@ namespace Mod
 		{
 			GUI.enabled = true;
 
-			Settings.useAutoPot = GUILayout.Toggle(Settings.useAutoPot, "Auto HP Pot");
+			Settings.useAutoPot = DrawOptionToggle(Settings.useAutoPot, "Auto HP Pot");
 			if (Settings.useAutoPot)
 			{
 				GUILayout.Label("Auto HP Pot Threshold %: " + Settings.autoHealthPotion.ToString("F1"));
@@ -213,7 +213,7 @@ namespace Mod
 				Settings.autoPotionCooldown = GUILayout.HorizontalSlider(Settings.autoPotionCooldown, 0.1f, 5.0f);
 			}
 
-			Settings.useAutoDisconnect = GUILayout.Toggle(Settings.useAutoDisconnect, "Auto Disconnect on Low HP");
+			Settings.useAutoDisconnect = DrawOptionToggle(Settings.useAutoDisconnect, "Auto Disconnect on Low HP");
 			if (Settings.useAutoDisconnect)
 			{
 				GUILayout.Label("Auto Disconnect Threshold %: " + Settings.autoDisconnectHealthPercent.ToString("F1"));
@@ -222,21 +222,21 @@ namespace Mod
 				GUILayout.Label("Auto Disconnect Cooldown: " + Settings.autoDisconnectCooldownSeconds.ToString("F0") + "s");
 				Settings.autoDisconnectCooldownSeconds = GUILayout.HorizontalSlider(Settings.autoDisconnectCooldownSeconds, 1f, 60f);
 
-				Settings.autoDisconnectOnlyWhenNoPotions = GUILayout.Toggle(Settings.autoDisconnectOnlyWhenNoPotions, "Only Disconnect When Out of Potions");
+				Settings.autoDisconnectOnlyWhenNoPotions = DrawOptionToggle(Settings.autoDisconnectOnlyWhenNoPotions, "Only Disconnect When Out of Potions");
 			}
 
 			dpsMeterSubDropdown = DrawSubmenuToggle(dpsMeterSubDropdown, "DPS Meter");
 			if (dpsMeterSubDropdown)
 			{
 				bool wasEnabled = Settings.enableDpsMeter;
-				Settings.enableDpsMeter = GUILayout.Toggle(Settings.enableDpsMeter, "Enable DPS Meter Overlay");
-				Settings.enableDpsMeterOnlineRaw = GUILayout.Toggle(
+				Settings.enableDpsMeter = DrawOptionToggle(Settings.enableDpsMeter, "Enable DPS Meter Overlay");
+				Settings.enableDpsMeterOnlineRaw = DrawOptionToggle(
 					Settings.enableDpsMeterOnlineRaw,
 					"Allow Online Raw Source");
-				Settings.dpsMeterPanelLocked = GUILayout.Toggle(
+				Settings.dpsMeterPanelLocked = DrawOptionToggle(
 					Settings.dpsMeterPanelLocked,
 					"Lock DPS Panel Position/Size");
-				Settings.enableDamageNumberDiagnostics = GUILayout.Toggle(
+				Settings.enableDamageNumberDiagnostics = DrawOptionToggle(
 					Settings.enableDamageNumberDiagnostics,
 					"Enable DamageNumber Diagnostics (Verbose Logs)");
 				if (wasEnabled && !Settings.enableDpsMeter)
@@ -249,7 +249,7 @@ namespace Mod
 					GUILayout.Label("DPS Window (s): " + Settings.dpsMeterWindowSeconds.ToString("F1"));
 					Settings.dpsMeterWindowSeconds = GUILayout.HorizontalSlider(Settings.dpsMeterWindowSeconds, 1f, 20f);
 
-					Settings.dpsMeterAutoReset = GUILayout.Toggle(Settings.dpsMeterAutoReset, "Auto Reset After Inactivity");
+					Settings.dpsMeterAutoReset = DrawOptionToggle(Settings.dpsMeterAutoReset, "Auto Reset After Inactivity");
 					if (Settings.dpsMeterAutoReset)
 					{
 						GUILayout.Label("Inactivity Reset (s): " + Settings.dpsMeterInactivityResetSeconds.ToString("F1"));
@@ -321,7 +321,7 @@ namespace Mod
 
 		private static void DrawInventoryToggle(string label, MelonPreferences_Entry<bool> entry)
 		{
-			bool value = GUILayout.Toggle(entry.Value, label);
+			bool value = DrawOptionToggle(entry.Value, label);
 			if (value == entry.Value)
 				return;
 
@@ -334,6 +334,21 @@ namespace Mod
 		{
 			return GUILayout.Toggle(selected, label,
 				CooldownTrackerTheme.Button(10, selected: selected), GUILayout.Height(26f));
+		}
+
+		private static bool DrawOptionToggle(bool selected, string label)
+		{
+			GUIStyle rowStyle = CooldownTrackerTheme.OptionRow(selected);
+			Rect row = GUILayoutUtility.GetRect(GUIContent.none, rowStyle,
+				GUILayout.ExpandWidth(true), GUILayout.Height(25f));
+			if (GUI.Button(row, GUIContent.none, rowStyle))
+				selected = !selected;
+
+			CooldownTrackerTheme.Text9(new Rect(row.x + 9f, row.y, row.width - 68f, row.height),
+				label, selected ? CooldownTrackerTheme.TextHi : CooldownTrackerTheme.Text, 10);
+			Rect badge = new Rect(row.xMax - 51f, row.y + 3f, 42f, row.height - 6f);
+			GUI.Button(badge, selected ? "ON" : "OFF", CooldownTrackerTheme.Button(8, selected: selected));
+			return selected;
 		}
 
 		private static void DrawCooldownsTab()
@@ -350,24 +365,24 @@ namespace Mod
 			GUI.enabled = true;
 
 			bool previousRemoveFog = Settings.removeFog;
-			Settings.removeFog = GUILayout.Toggle(Settings.removeFog, "Remove Fog");
+			Settings.removeFog = DrawOptionToggle(Settings.removeFog, "Remove Fog");
 			if (Settings.removeFog != previousRemoveFog)
 			{
 				GameMods.FogRemover();
 			}
 
-			Settings.cameraZoomUnlock = GUILayout.Toggle(Settings.cameraZoomUnlock, "Camera Zoom Unlock");
-			Settings.minimapZoomUnlock = GUILayout.Toggle(Settings.minimapZoomUnlock, "Minimap Zoom Unlock");
-			Settings.mapHack = GUILayout.Toggle(Settings.mapHack, "Map Hack (Boost RevealRadius 14,000%)");
+			Settings.cameraZoomUnlock = DrawOptionToggle(Settings.cameraZoomUnlock, "Camera Zoom Unlock");
+			Settings.minimapZoomUnlock = DrawOptionToggle(Settings.minimapZoomUnlock, "Minimap Zoom Unlock");
+			Settings.mapHack = DrawOptionToggle(Settings.mapHack, "Map Hack (Boost RevealRadius 14,000%)");
 
 			bool previousPlayerLantern = Settings.playerLantern;
-			Settings.playerLantern = GUILayout.Toggle(Settings.playerLantern, "Player Lantern");
+			Settings.playerLantern = DrawOptionToggle(Settings.playerLantern, "Player Lantern");
 			if (Settings.playerLantern != previousPlayerLantern)
 			{
 				GameMods.playerLantern();
 			}
 
-			Settings.blockMenuInputWhenOpen = GUILayout.Toggle(
+			Settings.blockMenuInputWhenOpen = DrawOptionToggle(
 				Settings.blockMenuInputWhenOpen,
 				"Block Game Input While Menu Open (Keyboard + Mouse)");
 
@@ -377,10 +392,21 @@ namespace Mod
 			GUI.color = Color.green;
 			GUILayout.Label("Radar Monster Type Filters:");
 			GUI.color = prevColor;
-			Settings.showWhiteMonsters = GUILayout.Toggle(Settings.showWhiteMonsters, "Show White Monsters");
-			Settings.showMagicMonsters = GUILayout.Toggle(Settings.showMagicMonsters, "Show Magic Monsters");
-			Settings.showRareMonsters = GUILayout.Toggle(Settings.showRareMonsters, "Show Rare Monsters");
-			Settings.showBossMonsters = GUILayout.Toggle(Settings.showBossMonsters, "Show Boss Monsters");
+			Settings.showWhiteMonsters = DrawOptionToggle(Settings.showWhiteMonsters, "Show White Monsters");
+			Settings.showMagicMonsters = DrawOptionToggle(Settings.showMagicMonsters, "Show Magic Monsters");
+			Settings.showRareMonsters = DrawOptionToggle(Settings.showRareMonsters, "Show Rare Monsters");
+			Settings.showUniqueMonsters = DrawOptionToggle(Settings.showUniqueMonsters, "Show Unique Monsters");
+			Settings.showBossMonsters = DrawOptionToggle(Settings.showBossMonsters, "Show Boss Monsters");
+
+			GUILayout.Space(6f);
+			GUILayout.Label("Marker size and color (#RRGGBB)");
+			DrawRarityMarkerStyle("Normal", ref Settings.minimapNormalCircleSize, ref Settings.minimapNormalCircleColor);
+			DrawRarityMarkerStyle("Magic", ref Settings.minimapMagicCircleSize, ref Settings.minimapMagicCircleColor);
+			DrawRarityMarkerStyle("Rare", ref Settings.minimapRareCircleSize, ref Settings.minimapRareCircleColor);
+			DrawRarityMarkerStyle("Unique", ref Settings.minimapUniqueCircleSize, ref Settings.minimapUniqueCircleColor);
+			DrawRarityMarkerStyle("Boss", ref Settings.minimapBossCircleSize, ref Settings.minimapBossCircleColor);
+			GUILayout.Label("Marker opacity: " + Settings.minimapCircleOpacity.ToString("F2"));
+			Settings.minimapCircleOpacity = GUILayout.HorizontalSlider(Settings.minimapCircleOpacity, 0.1f, 1f);
 
 			GUILayout.Space(6f);
 			GUILayout.Label("Radar status: " + MinimapEnemyCircles.lastDebugInfo);
@@ -393,6 +419,37 @@ namespace Mod
 			GUILayout.Label("Fullscreen radar offset Y: " + Settings.minimapFullscreenOffsetY.ToString("F0"));
 			Settings.minimapFullscreenOffsetY = GUILayout.HorizontalSlider(
 				Settings.minimapFullscreenOffsetY, -500f, 500f);
+		}
+
+		private static void DrawRarityMarkerStyle(string label, ref float size, ref string colorHex)
+		{
+			GUILayout.BeginHorizontal();
+			GUILayout.Label(label, GUILayout.Width(54f));
+			GUILayout.Label(size.ToString("F0"), GUILayout.Width(22f));
+			size = GUILayout.HorizontalSlider(size, 2f, 20f, GUILayout.Width(96f));
+
+			Color swatch = Color.white;
+			if (ColorUtility.TryParseHtmlString("#" + colorHex, out Color parsed)) swatch = parsed;
+			Color previous = GUI.color;
+			GUI.color = swatch;
+			GUILayout.Box(GUIContent.none, GUILayout.Width(18f), GUILayout.Height(18f));
+			GUI.color = previous;
+			GUILayout.Label("#", GUILayout.Width(10f));
+			string edited = GUILayout.TextField(colorHex, 6, GUILayout.Width(58f));
+			colorHex = FilterHexColor(edited);
+			GUILayout.EndHorizontal();
+		}
+
+		private static string FilterHexColor(string value)
+		{
+			var result = new System.Text.StringBuilder(6);
+			foreach (char c in value)
+			{
+				if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+					result.Append(char.ToUpperInvariant(c));
+				if (result.Length == 6) break;
+			}
+			return result.ToString();
 		}
 
 		private static void DrawRiskyAndDebugTab()
@@ -412,23 +469,23 @@ namespace Mod
 			}
 			else
 			{
-				Settings.useAnyWaypoint = GUILayout.Toggle(Settings.useAnyWaypoint, "Allow Any Waypoint");
+				Settings.useAnyWaypoint = DrawOptionToggle(Settings.useAnyWaypoint, "Allow Any Waypoint");
 			}
 
 			GUILayout.Space(10f);
 			antiIdleSubDropdown = DrawSubmenuToggle(antiIdleSubDropdown, "Anti-Idle");
 			if (antiIdleSubDropdown)
 			{
-				Settings.useSimpleAntiIdle = GUILayout.Toggle(Settings.useSimpleAntiIdle, "Enable Anti-Idle");
+				Settings.useSimpleAntiIdle = DrawOptionToggle(Settings.useSimpleAntiIdle, "Enable Anti-Idle");
 				if (Settings.useSimpleAntiIdle)
 				{
 					GUILayout.Label("Pulse Interval (s): " + Settings.simpleAntiIdleInterval.ToString("F0"));
 					Settings.simpleAntiIdleInterval = GUILayout.HorizontalSlider(Settings.simpleAntiIdleInterval, 60f, 900f);
-					Settings.forceIsIdleFalseFallback = GUILayout.Toggle(
+					Settings.forceIsIdleFalseFallback = DrawOptionToggle(
 						Settings.forceIsIdleFalseFallback,
 						"Force IsIdle FALSE Fallback (high risk)");
 
-					Settings.suppressKeepAliveOnActivity = GUILayout.Toggle(Settings.suppressKeepAliveOnActivity, "Suppress When Actively Playing");
+					Settings.suppressKeepAliveOnActivity = DrawOptionToggle(Settings.suppressKeepAliveOnActivity, "Suppress When Actively Playing");
 					if (Settings.suppressKeepAliveOnActivity)
 					{
 						GUILayout.Label("Activity Suppression (s): " + Settings.activitySuppressionSeconds.ToString("F0"));
@@ -455,25 +512,25 @@ namespace Mod
 				return;
 			}
 
-			Settings.enableNetworkDiagnostics = GUILayout.Toggle(Settings.enableNetworkDiagnostics, "Enable Network Diagnostics (Verbose)");
+			Settings.enableNetworkDiagnostics = DrawOptionToggle(Settings.enableNetworkDiagnostics, "Enable Network Diagnostics (Verbose)");
 			if (Settings.enableNetworkDiagnostics)
 			{
 				GUILayout.Label("Captures deep ClientNetworkService breadcrumbs during connect/load troubleshooting.");
 			}
 
-			Settings.debugEnableDiagnostics = GUILayout.Toggle(Settings.debugEnableDiagnostics, "Enable Diagnostics");
+			Settings.debugEnableDiagnostics = DrawOptionToggle(Settings.debugEnableDiagnostics, "Enable Diagnostics");
 			if (!Settings.debugEnableDiagnostics)
 			{
 				return;
 			}
 
-			Settings.debugShowLocalPlayerPanel = GUILayout.Toggle(Settings.debugShowLocalPlayerPanel, "Show Local Player Panel");
-			Settings.debugShowLocalPlayerWorldLabel = GUILayout.Toggle(Settings.debugShowLocalPlayerWorldLabel, "Show Local Player World Label");
-			Settings.debugDrawAllManagerActors = GUILayout.Toggle(Settings.debugDrawAllManagerActors, "Draw All ActorManager Actors (No Sorting)");
-			Settings.debugDrawAllGroundItems = GUILayout.Toggle(Settings.debugDrawAllGroundItems, "Draw All GroundItemVisuals");
-			Settings.debugDrawAllGroundGold = GUILayout.Toggle(Settings.debugDrawAllGroundGold, "Draw All GroundGoldVisuals");
-			Settings.debugDrawManagerLines = GUILayout.Toggle(Settings.debugDrawManagerLines, "Draw Debug Lines To Targets");
-			Settings.debugIgnoreDistanceCulling = GUILayout.Toggle(Settings.debugIgnoreDistanceCulling, "Ignore Draw Distance Culling");
+			Settings.debugShowLocalPlayerPanel = DrawOptionToggle(Settings.debugShowLocalPlayerPanel, "Show Local Player Panel");
+			Settings.debugShowLocalPlayerWorldLabel = DrawOptionToggle(Settings.debugShowLocalPlayerWorldLabel, "Show Local Player World Label");
+			Settings.debugDrawAllManagerActors = DrawOptionToggle(Settings.debugDrawAllManagerActors, "Draw All ActorManager Actors (No Sorting)");
+			Settings.debugDrawAllGroundItems = DrawOptionToggle(Settings.debugDrawAllGroundItems, "Draw All GroundItemVisuals");
+			Settings.debugDrawAllGroundGold = DrawOptionToggle(Settings.debugDrawAllGroundGold, "Draw All GroundGoldVisuals");
+			Settings.debugDrawManagerLines = DrawOptionToggle(Settings.debugDrawManagerLines, "Draw Debug Lines To Targets");
+			Settings.debugIgnoreDistanceCulling = DrawOptionToggle(Settings.debugIgnoreDistanceCulling, "Ignore Draw Distance Culling");
 
 			GUILayout.Label("Debug Max Entries/System: " + Settings.debugMaxEntriesPerSystem.ToString());
 			var debugMax = GUILayout.HorizontalSlider(Settings.debugMaxEntriesPerSystem, 10f, 500f);

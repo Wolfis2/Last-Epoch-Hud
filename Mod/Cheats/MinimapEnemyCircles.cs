@@ -65,9 +65,13 @@ namespace Mod.Cheats
         
         // Prebuilt sprites cache to avoid per-frame texture allocations
         private static Sprite? spriteWhite;
-        private static Sprite? spriteYellow;
-        private static Sprite? spriteBlue;
-        private static Sprite? spriteRed;
+
+        private static Color ReadMarkerColor(string hex, Color fallback)
+        {
+            if (!string.IsNullOrWhiteSpace(hex) && ColorUtility.TryParseHtmlString("#" + hex.TrimStart('#'), out Color parsed))
+                return parsed;
+            return fallback;
+        }
 
         
         public static void Update()
@@ -317,9 +321,6 @@ namespace Mod.Cheats
             // Choose a fixed reasonable texture size for cached sprites; scale via RectTransform
             const int baseSize = 16;
             if (spriteWhite == null) spriteWhite = BuildCircleSprite(baseSize, Color.white);
-            if (spriteYellow == null) spriteYellow = BuildCircleSprite(baseSize, Color.yellow);
-            if (spriteBlue == null) spriteBlue = BuildCircleSprite(baseSize, Drawing.MagicLightBlue);
-            if (spriteRed == null) spriteRed = BuildCircleSprite(baseSize, Color.red);
         }
         
         private static Sprite BuildCircleSprite(int size, Color color)
@@ -344,9 +345,6 @@ namespace Mod.Cheats
                 Vector3 playerPosition = playerTransform.position;
                 float drawDistance = Settings.drawDistance;
                 float drawDistanceSqr = drawDistance * drawDistance;
-                int circleSize = Mathf.Max(2, Mathf.RoundToInt(Settings.minimapCircleSize));
-                Vector2 circleSizeDelta = new Vector2(circleSize, circleSize);
-
                 int totalVisuals = 0;
                 int alignmentFiltered = 0;
                 int candidateEnemyCount = 0;
@@ -417,7 +415,7 @@ namespace Mod.Cheats
                             candidateEnemyCount++;
                             if (successfulCircles >= MaxRenderedEnemies) continue;
 
-                            if (!TryGetEnemySprite(actor, out Sprite? sprite) || sprite == null)
+                            if (!TryGetEnemyStyle(actor, out Color markerColor, out float markerSize))
                                 continue;
 
                             Vector2 minimapPos = WorldDeltaToMinimapPosition(
@@ -438,7 +436,10 @@ namespace Mod.Cheats
                             if (Mathf.Abs(minimapPos.x) > maxBounds.x || Mathf.Abs(minimapPos.y) > maxBounds.y)
                                 continue;
 
-                            UpsertMinimapCircle(successfulCircles, sprite, minimapPos, circleSizeDelta);
+                            if (spriteWhite == null) continue;
+                            int circleSize = Mathf.Max(2, Mathf.RoundToInt(markerSize));
+                            UpsertMinimapCircle(successfulCircles, spriteWhite, minimapPos,
+                                new Vector2(circleSize, circleSize), markerColor);
                             successfulCircles++;
                         }
                     }
@@ -461,67 +462,51 @@ namespace Mod.Cheats
             }
         }
 
-        private static bool TryGetEnemySprite(ActorVisuals enemy, out Sprite? sprite)
+        private static bool TryGetEnemyStyle(ActorVisuals enemy, out Color color, out float size)
         {
             var displayInfo = enemy.GetComponent<ActorDisplayInformation>();
             if (displayInfo == null)
             {
-                if (!Settings.showWhiteMonsters)
-                {
-                    sprite = null;
-                    return false;
-                }
+                color = ReadMarkerColor(Settings.minimapNormalCircleColor, Color.red);
+                size = Settings.minimapNormalCircleSize;
+                return Settings.showWhiteMonsters;
+            }
 
-                sprite = spriteWhite;
-                return sprite != null;
+            string className = displayInfo.actorClass.ToString();
+            if (className.IndexOf("Unique", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                color = ReadMarkerColor(Settings.minimapUniqueCircleColor, new Color(0.95f, 0.55f, 0.12f));
+                size = Settings.minimapUniqueCircleSize;
+                return Settings.showUniqueMonsters;
             }
 
             switch (displayInfo.actorClass)
             {
                 case DisplayActorClass.Boss:
-                    if (!Settings.showBossMonsters)
-                    {
-                        sprite = null;
-                        return false;
-                    }
-
-                    sprite = spriteRed;
-                    return sprite != null;
+                    color = ReadMarkerColor(Settings.minimapBossCircleColor, new Color(0.95f, 0.55f, 0.12f));
+                    size = Settings.minimapBossCircleSize;
+                    return Settings.showBossMonsters;
                 case DisplayActorClass.Rare:
-                    if (!Settings.showRareMonsters)
-                    {
-                        sprite = null;
-                        return false;
-                    }
-
-                    sprite = spriteYellow;
-                    return sprite != null;
+                    color = ReadMarkerColor(Settings.minimapRareCircleColor, new Color(0.96f, 0.83f, 0.16f));
+                    size = Settings.minimapRareCircleSize;
+                    return Settings.showRareMonsters;
                 case DisplayActorClass.Magic:
-                    if (!Settings.showMagicMonsters)
-                    {
-                        sprite = null;
-                        return false;
-                    }
-
-                    sprite = spriteBlue;
-                    return sprite != null;
+                    color = ReadMarkerColor(Settings.minimapMagicCircleColor, new Color(0.20f, 0.53f, 1f));
+                    size = Settings.minimapMagicCircleSize;
+                    return Settings.showMagicMonsters;
                 case DisplayActorClass.Normal:
-                    if (!Settings.showWhiteMonsters)
-                    {
-                        sprite = null;
-                        return false;
-                    }
-
-                    sprite = spriteWhite;
-                    return sprite != null;
+                    color = ReadMarkerColor(Settings.minimapNormalCircleColor, Color.red);
+                    size = Settings.minimapNormalCircleSize;
+                    return Settings.showWhiteMonsters;
                 default:
                     // Match previous behavior: unknown classes with display info were shown by default.
-                    sprite = spriteWhite;
-                    return sprite != null;
+                    color = ReadMarkerColor(Settings.minimapNormalCircleColor, Color.red);
+                    size = Settings.minimapNormalCircleSize;
+                    return true;
             }
         }
 
-        private static void UpsertMinimapCircle(int index, Sprite sprite, Vector2 position, Vector2 sizeDelta)
+        private static void UpsertMinimapCircle(int index, Sprite sprite, Vector2 position, Vector2 sizeDelta, Color color)
         {
             CircleVisual circle = GetOrCreateCircle(index);
             if (activeIconsContainer != null && circle.RectTransform.parent != activeIconsContainer.transform)
@@ -539,6 +524,9 @@ namespace Mod.Cheats
             {
                 circle.Image.sprite = sprite;
             }
+
+            color.a *= Settings.minimapCircleOpacity;
+            circle.Image.color = color;
 
             if (!circle.GameObject.activeSelf)
             {
@@ -778,13 +766,7 @@ namespace Mod.Cheats
         {
             DestroyAllCircles();
             DestroySpriteAndTexture(spriteWhite);
-            DestroySpriteAndTexture(spriteYellow);
-            DestroySpriteAndTexture(spriteBlue);
-            DestroySpriteAndTexture(spriteRed);
             spriteWhite = null;
-            spriteYellow = null;
-            spriteBlue = null;
-            spriteRed = null;
             minimapCanvas = null;
             iconsContainer = null;
             mapContainer = null;
