@@ -84,7 +84,7 @@ namespace Mod.Cheats.CooldownTracker
             float cs = 16f * sc;
             _closeR = new Rect(px + pw - cs - 5f * sc, py + (th - cs) * 0.5f, cs, cs);
             GUI.color = Color.white;
-            GUI.Button(_closeR, "✕", Theme.Button(Mathf.RoundToInt(8 * sc), danger: true));
+            Drawing.OutlinedButton(_closeR, "✕", Theme.Button(Mathf.RoundToInt(8 * sc), danger: true));
 
             float y = py + th + 7f * sc;
             if (effMI == 2)

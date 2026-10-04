@@ -5,6 +5,7 @@ using Mod.Cheats.Inventory;
 using CooldownTrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
 using FallenAutoEnabler = Mod.Cheats.FallenPlugins.AutoEnabler;
 using FallenImprovedTooltips = Mod.Cheats.FallenPlugins.ImprovedTooltips;
+using TerribleTooltipsRuntime = Mod.Cheats.TerribleTooltips.TerribleTooltipsRuntime;
 using Mod.Game;
 using System.Reflection;
 using HarmonyLib;
@@ -45,16 +46,40 @@ namespace Mod;
 				CooldownTrackerRuntime.Initialize();
 				FallenAutoEnabler.Initialize();
 				FallenImprovedTooltips.Initialize();
+				TerribleTooltipsRuntime.Initialize();
 				MapHack.InitializeSceneFallback();
 
 				s_harmony = new HarmonyLib.Harmony(HarmonyId);
-				s_harmony.PatchAll(typeof(Mod).Assembly);
+				PatchAllIsolatingTerribleTooltips(s_harmony);
 				MelonLogger.Msg("[LEHud] Harmony patches applied");
 				VerifyNetworkingTargets();
 			}
 			catch (System.Exception e)
 			{
 				MelonLogger.Error($"[LEHud] Harmony init failed: {e.Message}");
+			}
+		}
+
+		// Terrible Tooltips patches are applied one class at a time so a game update that breaks one of
+		// its signatures degrades that feature only, instead of aborting every LEHud patch.
+		private static void PatchAllIsolatingTerribleTooltips(HarmonyLib.Harmony harmony)
+		{
+			foreach (Type type in HarmonyLib.AccessTools.GetTypesFromAssembly(typeof(Mod).Assembly))
+			{
+				if (type.Namespace != "Mod.Cheats.TerribleTooltips" && !(type.DeclaringType?.Namespace == "Mod.Cheats.TerribleTooltips"))
+				{
+					harmony.CreateClassProcessor(type).Patch();
+					continue;
+				}
+
+				try
+				{
+					harmony.CreateClassProcessor(type).Patch();
+				}
+				catch (Exception e)
+				{
+					MelonLogger.Warning($"[LEHud] Terrible Tooltips feature '{type.Name}' disabled: {e.Message}");
+				}
 			}
 		}
 
@@ -149,6 +174,7 @@ namespace Mod;
 			RunUpdateSafely("AutoEnabler", FallenAutoEnabler.Update);
 			RunUpdateSafely("CooldownTracker", CooldownTrackerRuntime.Update);
 			RunUpdateSafely("DpsMeter", DpsMeter.OnUpdate);
+			RunUpdateSafely("TerribleTooltips", TerribleTooltipsRuntime.OnUpdate);
 			RunUpdateSafely("AntiIdleSystem", AntiIdleSystem.OnUpdate);
 
 			try
@@ -202,6 +228,7 @@ namespace Mod;
 		public override void OnLateUpdate() // Runs once per frame after OnUpdate and OnFixedUpdate have finished.
 		{
 			InventoryUi.KeepAlive();
+			RunUpdateSafely("TerribleTooltips.Late", TerribleTooltipsRuntime.OnLateUpdate);
 		}
 
 		public override void OnGUI() // Can run multiple times per frame. Mostly used for Unity's IMGUI.
@@ -234,6 +261,7 @@ namespace Mod;
 			CooldownTrackerRuntime.Save();
 			FallenAutoEnabler.Save();
 			FallenImprovedTooltips.Save();
+			TerribleTooltipsRuntime.Save();
 			if (s_timeScaleWasApplied)
 			{
 				UnityEngine.Time.timeScale = 1.0f;

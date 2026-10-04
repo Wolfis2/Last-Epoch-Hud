@@ -9,6 +9,7 @@ using TrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
 using CooldownTrackerTheme = Mod.Cheats.CooldownTracker.Theme;
 using FallenAutoEnabler = Mod.Cheats.FallenPlugins.AutoEnabler;
 using FallenImprovedTooltips = Mod.Cheats.FallenPlugins.ImprovedTooltips;
+using TtPrefs = Mod.Cheats.TerribleTooltips.Prefs;
 using Mod.Game;
 using Mod.Utils;
 
@@ -49,6 +50,13 @@ namespace Mod
 
 		public static void DrawModWindow(int windowID)
 		{
+			Drawing.DrawHudBackground(new Rect(2f, 28f, windowRect.width - 4f, windowRect.height - 30f));
+			GUIStyle titleStyle = CooldownTrackerTheme.Label(20, FontStyle.Bold, TextAnchor.MiddleCenter);
+			Drawing.OutlinedLabel(new Rect(0f, 1f, windowRect.width - 34f, 28f), "LEHUD", titleStyle);
+			float titleWidth = titleStyle.CalcSize(new GUIContent("LEHUD")).x;
+			float versionX = (windowRect.width - 34f) * 0.5f + titleWidth * 0.5f + 4f;
+			Drawing.OutlinedLabel(new Rect(versionX, 5f, 80f, 24f), "v" + global::Mod.BuildInfo.Version, CooldownTrackerTheme.Label(11, FontStyle.Normal, TextAnchor.MiddleLeft));
+			Drawing.DrawMoveIcon(new Rect(8f, 4f, 20f, 20f));
 			GUILayout.BeginVertical();
 
 			DrawTabBar();
@@ -95,7 +103,7 @@ namespace Mod
 			Box(resizeGripRect, "");
 
 			Rect closeRect = new Rect(windowRect.width - 30f, 1f, 24f, 22f);
-			if (GUI.Button(closeRect, "X", CooldownTrackerTheme.Button(10, danger: true)))
+			if (Drawing.OutlinedButton(closeRect, "X", CooldownTrackerTheme.Button(12, danger: true), FontStyle.Bold))
 				ToggleMenu("Close button");
 
 			DragWindow(new Rect(0, 0, windowRect.width - 34f, 24f));
@@ -123,9 +131,10 @@ namespace Mod
 					Color prevColor = GUI.color;
 					GUI.color = Color.white;
 
-					bool pressed = GUILayout.Toggle(isSelected, s_tabLabels[i],
-						CooldownTrackerTheme.Button(10, selected: isSelected),
-						GUILayout.Height(26f), GUILayout.ExpandWidth(true));
+					GUIStyle tabStyle = CooldownTrackerTheme.Button(13, selected: isSelected);
+					bool pressed = GUILayout.Toggle(isSelected, GUIContent.none, tabStyle,
+						GUILayout.Height(28f), GUILayout.ExpandWidth(true));
+					Drawing.DrawButtonCaption(GUILayoutUtility.GetLastRect(), s_tabLabels[i].text, tabStyle, FontStyle.Bold);
 					GUI.color = prevColor;
 
 					if (pressed && !isSelected)
@@ -153,7 +162,7 @@ namespace Mod
 					Settings.showESPLines = DrawOptionToggle(Settings.showESPLines, "Show ESP Lines");
 					Settings.showESPLabels = DrawOptionToggle(Settings.showESPLabels, "Show ESP Labels");
 
-				GUILayout.Label("Chest ESP Vertical Cull (m): " + Settings.espVerticalCullMeters.ToString("F0"));
+				Drawing.OutlinedLabel("Chest ESP Vertical Cull (m): " + Settings.espVerticalCullMeters.ToString("F0"));
 				Settings.espVerticalCullMeters = GUILayout.HorizontalSlider(Settings.espVerticalCullMeters, 0f, 200f);
 			}
 
@@ -209,7 +218,7 @@ namespace Mod
 			}
 
 			GUILayout.Space(6f);
-			GUILayout.Label("Draw Distance: " + Settings.drawDistance.ToString("F1"));
+			Drawing.OutlinedLabel("Draw Distance: " + Settings.drawDistance.ToString("F1"));
 			Settings.drawDistance = GUILayout.HorizontalSlider(Settings.drawDistance, 0.0f, 300.0f);
 		}
 
@@ -220,20 +229,20 @@ namespace Mod
 			Settings.useAutoPot = DrawOptionToggle(Settings.useAutoPot, "Auto HP Pot");
 			if (Settings.useAutoPot)
 			{
-				GUILayout.Label("Auto HP Pot Threshold %: " + Settings.autoHealthPotion.ToString("F1"));
+				Drawing.OutlinedLabel("Auto HP Pot Threshold %: " + Settings.autoHealthPotion.ToString("F1"));
 				Settings.autoHealthPotion = GUILayout.HorizontalSlider(Settings.autoHealthPotion, 0.0f, 100.0f);
 
-				GUILayout.Label("Auto HP Pot Cooldown: " + Settings.autoPotionCooldown.ToString("F1") + "s");
+				Drawing.OutlinedLabel("Auto HP Pot Cooldown: " + Settings.autoPotionCooldown.ToString("F1") + "s");
 				Settings.autoPotionCooldown = GUILayout.HorizontalSlider(Settings.autoPotionCooldown, 0.1f, 5.0f);
 			}
 
 			Settings.useAutoDisconnect = DrawOptionToggle(Settings.useAutoDisconnect, "Auto Disconnect on Low HP");
 			if (Settings.useAutoDisconnect)
 			{
-				GUILayout.Label("Auto Disconnect Threshold %: " + Settings.autoDisconnectHealthPercent.ToString("F1"));
+				Drawing.OutlinedLabel("Auto Disconnect Threshold %: " + Settings.autoDisconnectHealthPercent.ToString("F1"));
 				Settings.autoDisconnectHealthPercent = GUILayout.HorizontalSlider(Settings.autoDisconnectHealthPercent, 0.0f, 100.0f);
 
-				GUILayout.Label("Auto Disconnect Cooldown: " + Settings.autoDisconnectCooldownSeconds.ToString("F0") + "s");
+				Drawing.OutlinedLabel("Auto Disconnect Cooldown: " + Settings.autoDisconnectCooldownSeconds.ToString("F0") + "s");
 				Settings.autoDisconnectCooldownSeconds = GUILayout.HorizontalSlider(Settings.autoDisconnectCooldownSeconds, 1f, 60f);
 
 				Settings.autoDisconnectOnlyWhenNoPotions = DrawOptionToggle(Settings.autoDisconnectOnlyWhenNoPotions, "Only Disconnect When Out of Potions");
@@ -260,21 +269,21 @@ namespace Mod
 
 				if (Settings.enableDpsMeter)
 				{
-					GUILayout.Label("DPS Window (s): " + Settings.dpsMeterWindowSeconds.ToString("F1"));
+					Drawing.OutlinedLabel("DPS Window (s): " + Settings.dpsMeterWindowSeconds.ToString("F1"));
 					Settings.dpsMeterWindowSeconds = GUILayout.HorizontalSlider(Settings.dpsMeterWindowSeconds, 1f, 20f);
 
 					Settings.dpsMeterAutoReset = DrawOptionToggle(Settings.dpsMeterAutoReset, "Auto Reset After Inactivity");
 					if (Settings.dpsMeterAutoReset)
 					{
-						GUILayout.Label("Inactivity Reset (s): " + Settings.dpsMeterInactivityResetSeconds.ToString("F1"));
+						Drawing.OutlinedLabel("Inactivity Reset (s): " + Settings.dpsMeterInactivityResetSeconds.ToString("F1"));
 						Settings.dpsMeterInactivityResetSeconds = GUILayout.HorizontalSlider(Settings.dpsMeterInactivityResetSeconds, 2f, 60f);
 					}
 
-					if (GUILayout.Button("Reset DPS Stats"))
+					if (LayoutButton("Reset DPS Stats"))
 					{
 						DpsMeter.Reset();
 					}
-					if (GUILayout.Button("Reset DPS Panel Layout"))
+					if (LayoutButton("Reset DPS Panel Layout"))
 					{
 						DpsMeter.ResetPanelLayout();
 					}
@@ -282,39 +291,39 @@ namespace Mod
 					if (!ObjectManager.IsOfflineMode() && Settings.enableDpsMeterOnlineRaw)
 					{
 						GUILayout.Space(4f);
-						GUILayout.Label("Online Ownership Filter");
-						if (GUILayout.Button("Filter Mode: " + DescribeDpsFilterMode(Settings.dpsMeterOnlineFilterMode)))
+						Drawing.OutlinedLabel("Online Ownership Filter");
+						if (LayoutButton("Filter Mode: " + DescribeDpsFilterMode(Settings.dpsMeterOnlineFilterMode)))
 						{
 							Settings.dpsMeterOnlineFilterMode = (Settings.dpsMeterOnlineFilterMode + 1) % 3;
 						}
 
-						GUILayout.Label("Near Radius (incoming bias): " + Settings.dpsMeterNearPlayerMeters.ToString("F1") + "m");
+						Drawing.OutlinedLabel("Near Radius (incoming bias): " + Settings.dpsMeterNearPlayerMeters.ToString("F1") + "m");
 						Settings.dpsMeterNearPlayerMeters = GUILayout.HorizontalSlider(Settings.dpsMeterNearPlayerMeters, 0.5f, 6f);
 
 						float minFar = Mathf.Max(Settings.dpsMeterNearPlayerMeters + 0.2f, 0.7f);
-						GUILayout.Label("Far Radius (outgoing bias): " + Settings.dpsMeterFarPlayerMeters.ToString("F1") + "m");
+						Drawing.OutlinedLabel("Far Radius (outgoing bias): " + Settings.dpsMeterFarPlayerMeters.ToString("F1") + "m");
 						Settings.dpsMeterFarPlayerMeters = GUILayout.HorizontalSlider(Settings.dpsMeterFarPlayerMeters, minFar, 12f);
 
-						GUILayout.Label("HP Drop Correlation Window: " + Settings.dpsMeterHpDropCorrelationMs.ToString("F0") + "ms");
+						Drawing.OutlinedLabel("HP Drop Correlation Window: " + Settings.dpsMeterHpDropCorrelationMs.ToString("F0") + "ms");
 						Settings.dpsMeterHpDropCorrelationMs = GUILayout.HorizontalSlider(Settings.dpsMeterHpDropCorrelationMs, 50f, 1000f);
 					}
 				}
 
 				if (!Settings.dpsMeterPanelLocked)
 				{
-					GUILayout.Label("DPS panel unlocked: drag title to move, bottom-right grip to resize.");
+					Drawing.OutlinedLabel("DPS panel unlocked: drag title to move, bottom-right grip to resize.");
 				}
 				if (!ObjectManager.IsOfflineMode() && !Settings.enableDpsMeterOnlineRaw)
 				{
-					GUILayout.Label("Online meter disabled. Enable 'Online Raw Source' to collect from damage-number text.");
+					Drawing.OutlinedLabel("Online meter disabled. Enable 'Online Raw Source' to collect from damage-number text.");
 				}
 				if (!ObjectManager.IsOfflineMode() && Settings.enableDpsMeterOnlineRaw)
 				{
-					GUILayout.Label("Online Raw can be filtered by proximity + local HP-drop correlation.");
+					Drawing.OutlinedLabel("Online Raw can be filtered by proximity + local HP-drop correlation.");
 				}
 				if (Settings.enableDamageNumberDiagnostics)
 				{
-					GUILayout.Label("DamageNumber diagnostics are active. Check Melon logs for renderer summaries.");
+					Drawing.OutlinedLabel("DamageNumber diagnostics are active. Check Melon logs for renderer summaries.");
 				}
 			}
 		}
@@ -322,8 +331,8 @@ namespace Mod
 		private static void DrawInventoryTab()
 		{
 			GUI.enabled = true;
-			GUILayout.Label("Inventory buttons are added to the game's inventory panel.");
-			GUILayout.Label("Stash/vendor-from-anywhere features may conflict with online play; use at your own risk.");
+			Drawing.OutlinedLabel("Inventory buttons are added to the game's inventory panel.");
+			Drawing.OutlinedLabel("Stash/vendor-from-anywhere features may conflict with online play; use at your own risk.");
 			GUILayout.Space(6f);
 
 			DrawInventoryToggle("Show STASH button", Prefs.ShowStash);
@@ -344,10 +353,19 @@ namespace Mod
 			Prefs.Save();
 		}
 
+		private static bool LayoutButton(string label)
+		{
+			GUIStyle style = CooldownTrackerTheme.Button(11);
+			Rect rect = GUILayoutUtility.GetRect(GUIContent.none, style, GUILayout.Height(24f), GUILayout.ExpandWidth(true));
+			return Drawing.OutlinedButton(rect, label, style);
+		}
+
 		private static bool DrawSubmenuToggle(bool selected, string label)
 		{
-			return GUILayout.Toggle(selected, label,
-				CooldownTrackerTheme.Button(10, selected: selected), GUILayout.Height(26f));
+			GUIStyle style = CooldownTrackerTheme.Button(12, selected: selected);
+			bool result = GUILayout.Toggle(selected, GUIContent.none, style, GUILayout.Height(26f));
+			Drawing.DrawButtonCaption(GUILayoutUtility.GetLastRect(), label, style, FontStyle.Bold);
+			return result;
 		}
 
 		private static bool DrawOptionToggle(bool selected, string label)
@@ -359,9 +377,9 @@ namespace Mod
 				selected = !selected;
 
 			CooldownTrackerTheme.Text9(new Rect(row.x + 9f, row.y, row.width - 68f, row.height),
-				label, selected ? CooldownTrackerTheme.TextHi : CooldownTrackerTheme.Text, 10);
+				label, selected ? CooldownTrackerTheme.TextHi : CooldownTrackerTheme.Text, 11);
 			Rect badge = new Rect(row.xMax - 51f, row.y + 3f, 42f, row.height - 6f);
-			GUI.Button(badge, selected ? "ON" : "OFF", CooldownTrackerTheme.Button(8, selected: selected));
+			Drawing.OutlinedButton(badge, selected ? "ON" : "OFF", CooldownTrackerTheme.Button(9, selected: selected), FontStyle.Bold);
 			return selected;
 		}
 
@@ -381,11 +399,11 @@ namespace Mod
 			FallenAutoEnabler.ShowRings.Value = DrawOptionToggle(previousShowRings, "Show proximity rings");
 
 			float previousDistance = FallenAutoEnabler.Distance.Value;
-			GUILayout.Label($"Activation radius: {previousDistance:F1} m");
+			Drawing.OutlinedLabel($"Activation radius: {previousDistance:F1} m");
 			FallenAutoEnabler.Distance.Value = GUILayout.HorizontalSlider(previousDistance, 1f, 10f);
 
 			GUILayout.Space(6f);
-			GUILayout.Label("Proximity ring color");
+			Drawing.OutlinedLabel("Proximity ring color");
 			Color previousColor = FallenAutoEnabler.RingColor.Value;
 			Color color = previousColor;
 			color.r = DrawColorChannel("R", color.r);
@@ -400,8 +418,8 @@ namespace Mod
 			foreach (var entry in FallenAutoEnabler.TypeOptions)
 				entry.Value.Value = DrawOptionToggle(entry.Value.Value, $"Auto-activate {entry.Key}");
 			FallenAutoEnabler.DebugLog.Value = DrawOptionToggle(FallenAutoEnabler.DebugLog.Value, "Auto Enabler debug logging");
-			GUILayout.Label($"Tracked interactables: {FallenAutoEnabler.TrackedCount}");
-			GUILayout.Label(FallenAutoEnabler.LastEvent);
+			Drawing.OutlinedLabel($"Tracked interactables: {FallenAutoEnabler.TrackedCount}");
+			Drawing.OutlinedLabel(FallenAutoEnabler.LastEvent);
 
 			if (previousShowRings != FallenAutoEnabler.ShowRings.Value ||
 				Mathf.Abs(previousDistance - FallenAutoEnabler.Distance.Value) > 0.001f || color != previousColor)
@@ -411,9 +429,9 @@ namespace Mod
 		private static float DrawColorChannel(string label, float value)
 		{
 			GUILayout.BeginHorizontal();
-			GUILayout.Label(label, GUILayout.Width(64f));
+			Drawing.OutlinedLabel(label, GUILayout.Width(64f));
 			float next = GUILayout.HorizontalSlider(value, 0f, 1f);
-			GUILayout.Label(next.ToString("F2"), GUILayout.Width(36f));
+			Drawing.OutlinedLabel(next.ToString("F2"), GUILayout.Width(36f));
 			GUILayout.EndHorizontal();
 			return next;
 		}
@@ -421,8 +439,31 @@ namespace Mod
 		private static void DrawImprovedTooltipsTab()
 		{
 			GUI.enabled = true;
+			Drawing.DrawHeading("Tooltip Provider");
+			bool useTerrible = FallenImprovedTooltips.UseTerribleTooltips;
+			bool fallenClicked = DrawOptionToggle(!useTerrible, "Fallen's Improved Tooltips") != !useTerrible;
+			bool terribleClicked = DrawOptionToggle(useTerrible, "MedicK's Terrible Tooltips") != useTerrible;
+			if (fallenClicked)
+				useTerrible = false;
+			else if (terribleClicked)
+				useTerrible = true;
+			if (useTerrible != FallenImprovedTooltips.UseTerribleTooltips)
+			{
+				FallenImprovedTooltips.UseTerribleTooltipsEntry!.Value = useTerrible;
+				FallenImprovedTooltips.Save();
+			}			GUILayout.Space(8f);
+
+			if (useTerrible)
+				DrawTerribleTooltipsOptions();
+			else
+				DrawFallenTooltipsOptions();
+		}
+
+		private static void DrawFallenTooltipsOptions()
+		{
+			Drawing.DrawHeading("Fallen's Improved Tooltips");
 			if (FallenImprovedTooltips.KgImprovementsLoaded)
-				GUILayout.Label("Ground-label name and LP additions are disabled while kg_LastEpoch_Improvements is loaded.");
+				Drawing.OutlinedLabel("Ground-label name and LP additions are disabled while kg_LastEpoch_Improvements is loaded.");
 
 			GUI.enabled = !FallenImprovedTooltips.KgImprovementsLoaded;
 			FallenImprovedTooltips.ShowFullItemName!.Value = DrawOptionToggle(
@@ -434,6 +475,41 @@ namespace Mod
 				FallenImprovedTooltips.CompareStashItems.Value, "Compare LP / Weaver's Will with stash copies");
 		}
 
+		private static void DrawEnumCycle<T>(string title, MelonPreferences_Entry<T> entry) where T : struct, System.Enum
+		{
+			if (LayoutButton($"{title}: {entry.Value}"))
+			{
+				var values = (T[])System.Enum.GetValues(typeof(T));
+				int index = System.Array.IndexOf(values, entry.Value);
+				entry.Value = values[(index + 1) % values.Length];
+			}
+		}
+
+		private static void DrawTerribleTooltipsOptions()
+		{
+			Drawing.DrawHeading("MedicK's Terrible Tooltips");
+			Drawing.OutlinedLabel("Tier / grade colouring on tooltips and ground labels. Hold Alt while hovering to see full affix detail.");
+			TtPrefs.EnableTooltips.Value = DrawOptionToggle(TtPrefs.EnableTooltips.Value, "Tier / grade tooltip colours");
+			TtPrefs.TooltipTierColors.Value = DrawOptionToggle(TtPrefs.TooltipTierColors.Value, "Colour affixes by tier");
+			TtPrefs.TooltipRankColors.Value = DrawOptionToggle(TtPrefs.TooltipRankColors.Value, "Colour grade letters by roll quality");
+			TtPrefs.ShowGradeLetters.Value = DrawOptionToggle(TtPrefs.ShowGradeLetters.Value, "Show grade letters (S/A/B/C/F)");
+			TtPrefs.AlwaysShowRanges.Value = DrawOptionToggle(TtPrefs.AlwaysShowRanges.Value, "Always show affix ranges");
+			TtPrefs.AlwaysShowTierDetails.Value = DrawOptionToggle(TtPrefs.AlwaysShowTierDetails.Value, "Always show tier details");
+			TtPrefs.UnitBorder.Value = DrawOptionToggle(TtPrefs.UnitBorder.Value, "Border around the tier / grade unit");
+			DrawEnumCycle("Layout", TtPrefs.Layout);
+			DrawEnumCycle("Signal style", TtPrefs.Style);
+			DrawEnumCycle("Affix name colour", TtPrefs.NameColorMode);
+			DrawEnumCycle("Tier word", TtPrefs.TierWord);
+			DrawEnumCycle("Unit separator", TtPrefs.UnitSeparator);
+
+			GUILayout.Space(6f);
+			Drawing.DrawHeading("Ground Labels");
+			DrawEnumCycle("Label style", TtPrefs.LabelStyle);
+			TtPrefs.LabelFilterOnly.Value = DrawOptionToggle(TtPrefs.LabelFilterOnly.Value, "Only on loot-filter highlighted items");
+			TtPrefs.LabelAltKey.Value = DrawOptionToggle(TtPrefs.LabelAltKey.Value, "Hold Alt to show brackets");
+			DrawEnumCycle("Filter rule # on tooltip", TtPrefs.ShowFilterRuleNumber);
+			DrawEnumCycle("Rule # position on label", TtPrefs.LabelRulePosition);
+		}
 		private static void DrawGameplayTab()
 		{
 			GUI.enabled = true;
@@ -462,10 +538,7 @@ namespace Mod
 
 			GUILayout.Space(10f);
 
-			Color prevColor = GUI.color;
-			GUI.color = Color.green;
-			GUILayout.Label("Radar Monster Type Filters:");
-			GUI.color = prevColor;
+			Drawing.DrawHeading("Radar Monster Type Filters");
 			Settings.showWhiteMonsters = DrawOptionToggle(Settings.showWhiteMonsters, "Show White Monsters");
 			Settings.showMagicMonsters = DrawOptionToggle(Settings.showMagicMonsters, "Show Magic Monsters");
 			Settings.showRareMonsters = DrawOptionToggle(Settings.showRareMonsters, "Show Rare Monsters");
@@ -473,24 +546,24 @@ namespace Mod
 			Settings.showBossMonsters = DrawOptionToggle(Settings.showBossMonsters, "Show Boss Monsters");
 
 			GUILayout.Space(6f);
-			GUILayout.Label("Marker size and color (#RRGGBB)");
+			Drawing.OutlinedLabel("Marker size and color (#RRGGBB)");
 			DrawRarityMarkerStyle("Normal", ref Settings.minimapNormalCircleSize, ref Settings.minimapNormalCircleColor);
 			DrawRarityMarkerStyle("Magic", ref Settings.minimapMagicCircleSize, ref Settings.minimapMagicCircleColor);
 			DrawRarityMarkerStyle("Rare", ref Settings.minimapRareCircleSize, ref Settings.minimapRareCircleColor);
 			DrawRarityMarkerStyle("Unique", ref Settings.minimapUniqueCircleSize, ref Settings.minimapUniqueCircleColor);
 			DrawRarityMarkerStyle("Boss", ref Settings.minimapBossCircleSize, ref Settings.minimapBossCircleColor);
-			GUILayout.Label("Marker opacity: " + Settings.minimapCircleOpacity.ToString("F2"));
+			Drawing.OutlinedLabel("Marker opacity: " + Settings.minimapCircleOpacity.ToString("F2"));
 			Settings.minimapCircleOpacity = GUILayout.HorizontalSlider(Settings.minimapCircleOpacity, 0.1f, 1f);
 
 			GUILayout.Space(6f);
-			GUILayout.Label("Radar status: " + MinimapEnemyCircles.lastDebugInfo);
-			GUILayout.Label("Fullscreen scale correction: " + Settings.minimapFullscreenScaleCorrection.ToString("F3"));
+			Drawing.OutlinedLabel("Radar status: " + MinimapEnemyCircles.lastDebugInfo);
+			Drawing.OutlinedLabel("Fullscreen scale correction: " + Settings.minimapFullscreenScaleCorrection.ToString("F3"));
 			Settings.minimapFullscreenScaleCorrection = GUILayout.HorizontalSlider(
 				Settings.minimapFullscreenScaleCorrection, 0.01f, 1f);
-			GUILayout.Label("Fullscreen radar offset X: " + Settings.minimapFullscreenOffsetX.ToString("F0"));
+			Drawing.OutlinedLabel("Fullscreen radar offset X: " + Settings.minimapFullscreenOffsetX.ToString("F0"));
 			Settings.minimapFullscreenOffsetX = GUILayout.HorizontalSlider(
 				Settings.minimapFullscreenOffsetX, -500f, 500f);
-			GUILayout.Label("Fullscreen radar offset Y: " + Settings.minimapFullscreenOffsetY.ToString("F0"));
+			Drawing.OutlinedLabel("Fullscreen radar offset Y: " + Settings.minimapFullscreenOffsetY.ToString("F0"));
 			Settings.minimapFullscreenOffsetY = GUILayout.HorizontalSlider(
 				Settings.minimapFullscreenOffsetY, -500f, 500f);
 		}
@@ -498,8 +571,8 @@ namespace Mod
 		private static void DrawRarityMarkerStyle(string label, ref float size, ref string colorHex)
 		{
 			GUILayout.BeginHorizontal();
-			GUILayout.Label(label, GUILayout.Width(54f));
-			GUILayout.Label(size.ToString("F0"), GUILayout.Width(22f));
+			Drawing.OutlinedLabel(label, GUILayout.Width(54f));
+			Drawing.OutlinedLabel(size.ToString("F0"), GUILayout.Width(22f));
 			size = GUILayout.HorizontalSlider(size, 2f, 20f, GUILayout.Width(96f));
 
 			Color swatch = Color.white;
@@ -508,7 +581,7 @@ namespace Mod
 			GUI.color = swatch;
 			GUILayout.Box(GUIContent.none, GUILayout.Width(18f), GUILayout.Height(18f));
 			GUI.color = previous;
-			GUILayout.Label("#", GUILayout.Width(10f));
+			Drawing.OutlinedLabel("#", GUILayout.Width(10f));
 			string edited = GUILayout.TextField(colorHex, 6, GUILayout.Width(58f));
 			colorHex = FilterHexColor(edited);
 			GUILayout.EndHorizontal();
@@ -530,16 +603,16 @@ namespace Mod
 		{
 			GUI.enabled = true;
 
-			GUILayout.Label("These options are provided at your own risk.");
+			Drawing.OutlinedLabel("These options are provided at your own risk.");
 			GUILayout.Space(6f);
 
-			GUILayout.Label("TimeScale: " + Settings.timeScale.ToString("F1"));
+			Drawing.OutlinedLabel("TimeScale: " + Settings.timeScale.ToString("F1"));
 			Settings.timeScale = GUILayout.HorizontalSlider(Settings.timeScale, 0.1f, 6.0f);
 
 			GUILayout.Space(6f);
 			if (!ObjectManager.IsOfflineMode())
 			{
-				GUILayout.Label("Allow Any Waypoint: unavailable in online mode");
+				Drawing.OutlinedLabel("Allow Any Waypoint: unavailable in online mode");
 			}
 			else
 			{
@@ -553,7 +626,7 @@ namespace Mod
 				Settings.useSimpleAntiIdle = DrawOptionToggle(Settings.useSimpleAntiIdle, "Enable Anti-Idle");
 				if (Settings.useSimpleAntiIdle)
 				{
-					GUILayout.Label("Pulse Interval (s): " + Settings.simpleAntiIdleInterval.ToString("F0"));
+					Drawing.OutlinedLabel("Pulse Interval (s): " + Settings.simpleAntiIdleInterval.ToString("F0"));
 					Settings.simpleAntiIdleInterval = GUILayout.HorizontalSlider(Settings.simpleAntiIdleInterval, 60f, 900f);
 					Settings.forceIsIdleFalseFallback = DrawOptionToggle(
 						Settings.forceIsIdleFalseFallback,
@@ -562,10 +635,10 @@ namespace Mod
 					Settings.suppressKeepAliveOnActivity = DrawOptionToggle(Settings.suppressKeepAliveOnActivity, "Suppress When Actively Playing");
 					if (Settings.suppressKeepAliveOnActivity)
 					{
-						GUILayout.Label("Activity Suppression (s): " + Settings.activitySuppressionSeconds.ToString("F0"));
+						Drawing.OutlinedLabel("Activity Suppression (s): " + Settings.activitySuppressionSeconds.ToString("F0"));
 						Settings.activitySuppressionSeconds = GUILayout.HorizontalSlider(Settings.activitySuppressionSeconds, 5f, 300f);
 
-						GUILayout.Label("Scene Change Suppression (s): " + (Settings.sceneChangeSuppressionSeconds <= 0f ? "Disabled" : Settings.sceneChangeSuppressionSeconds.ToString("F0")));
+						Drawing.OutlinedLabel("Scene Change Suppression (s): " + (Settings.sceneChangeSuppressionSeconds <= 0f ? "Disabled" : Settings.sceneChangeSuppressionSeconds.ToString("F0")));
 						Settings.sceneChangeSuppressionSeconds = GUILayout.HorizontalSlider(Settings.sceneChangeSuppressionSeconds, 0f, 300f);
 					}
 				}
@@ -589,7 +662,7 @@ namespace Mod
 			Settings.enableNetworkDiagnostics = DrawOptionToggle(Settings.enableNetworkDiagnostics, "Enable Network Diagnostics (Verbose)");
 			if (Settings.enableNetworkDiagnostics)
 			{
-				GUILayout.Label("Captures deep ClientNetworkService breadcrumbs during connect/load troubleshooting.");
+				Drawing.OutlinedLabel("Captures deep ClientNetworkService breadcrumbs during connect/load troubleshooting.");
 			}
 
 			Settings.debugEnableDiagnostics = DrawOptionToggle(Settings.debugEnableDiagnostics, "Enable Diagnostics");
@@ -606,7 +679,7 @@ namespace Mod
 			Settings.debugDrawManagerLines = DrawOptionToggle(Settings.debugDrawManagerLines, "Draw Debug Lines To Targets");
 			Settings.debugIgnoreDistanceCulling = DrawOptionToggle(Settings.debugIgnoreDistanceCulling, "Ignore Draw Distance Culling");
 
-			GUILayout.Label("Debug Max Entries/System: " + Settings.debugMaxEntriesPerSystem.ToString());
+			Drawing.OutlinedLabel("Debug Max Entries/System: " + Settings.debugMaxEntriesPerSystem.ToString());
 			var debugMax = GUILayout.HorizontalSlider(Settings.debugMaxEntriesPerSystem, 10f, 500f);
 			Settings.debugMaxEntriesPerSystem = Mathf.RoundToInt(debugMax);
 		}
@@ -676,7 +749,7 @@ namespace Mod
 				try
 				{
 					CooldownTrackerTheme.ApplyHudSkin();
-					windowRect = GUI.Window(0, windowRect, (WindowFunction)DrawModWindow, "LEHUD");
+					windowRect = GUI.Window(0, windowRect, (WindowFunction)DrawModWindow, string.Empty);
 				}
 				finally
 				{
@@ -732,6 +805,7 @@ namespace Mod
 
 		private static bool IsPointerOverHud()
 		{
+			if (DpsMeter.IsPointerOverPanel()) return true;
 			if (!guiVisible) return false;
 			Vector3 mouse = Input.mousePosition;
 			Vector2 guiMouse = new Vector2(mouse.x, Screen.height - mouse.y);
@@ -757,6 +831,7 @@ namespace Mod
 			TrackerRuntime.Save();
 			FallenAutoEnabler.Save();
 			FallenImprovedTooltips.Save();
+			global::Mod.Cheats.TerribleTooltips.TerribleTooltipsRuntime.Save();
 			MelonLogger.Msg("[LEHud] Preferences Saved!");
 			AntiIdleSystem.OnMenuClosed();
 		}

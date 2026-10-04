@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Mod.Cheats.CooldownTracker;
 using Mod.Game;
 using Mod.Utils;
 using UnityEngine;
@@ -61,7 +62,10 @@ namespace Mod.Cheats
 		private static int s_lastScreenHeight;
 		private static float s_nextPanelTextRefreshAt;
 		private static string s_panelText = string.Empty;
+		private static GUIStyle? s_panelWindowStyle;
+		private static Texture2D? s_panelBackgroundTexture;
 		private static GUIStyle? s_panelLabelStyle;
+		private static GUIStyle? s_panelMetricStyle;
 		private static float s_recentDamage;
 		private static float s_totalDamage;
 		private static int s_totalEvents;
@@ -191,18 +195,36 @@ namespace Mod.Cheats
 			}
 		}
 
+		// True while the cursor is over the on-screen panel, so Menu can stop clicks reaching the game.
+		public static bool IsPointerOverPanel()
+		{
+			if (!s_panelInitialized || GetCurrentMode() == DpsSourceMode.None) return false;
+			Vector3 mouse = Input.mousePosition;
+			return s_panelRect.Contains(new Vector2(mouse.x, Screen.height - mouse.y));
+		}
+
 		public static void OnGUI()
 		{
 			if (GetCurrentMode() == DpsSourceMode.None)
 				return;
 
-			EnsurePanelInitialized();
-			EnsurePanelStyle();
-			s_panelTextContent.text = s_panelText;
-			AutoGrowPanelForContent();
-			s_panelRect = GUI.Window(PanelWindowId, s_panelRect, (GUI.WindowFunction)DrawPanelWindow, "LEHud DPS Meter");
-			ClampPanelToScreen();
-			SyncPanelToSettings();
+			GUISkin previousSkin = GUI.skin;
+			try
+			{
+				Theme.ApplyHudSkin();
+				EnsurePanelInitialized();
+				EnsurePanelStyle();
+				s_panelTextContent.text = s_panelText;
+				AutoGrowPanelForContent();
+				EnsurePanelWindowStyle();
+				s_panelRect = GUI.Window(PanelWindowId, s_panelRect, (GUI.WindowFunction)DrawPanelWindow, string.Empty, s_panelWindowStyle!);
+				ClampPanelToScreen();
+				SyncPanelToSettings();
+			}
+			finally
+			{
+				GUI.skin = previousSkin;
+			}
 		}
 
 		public static void OnSceneChanged()
@@ -304,8 +326,30 @@ namespace Mod.Cheats
 			s_panelLabelStyle = new GUIStyle(GUI.skin.label)
 			{
 				wordWrap = true,
-				clipping = TextClipping.Clip
+				clipping = TextClipping.Clip,
+				fontSize = 12
 			};
+			s_panelLabelStyle.normal.textColor = Theme.Text;
+			s_panelMetricStyle = Theme.Label(25, FontStyle.Bold);
+			s_panelMetricStyle.normal.textColor = Theme.Accent;
+		}
+
+		private static void EnsurePanelWindowStyle()
+		{
+			if (s_panelWindowStyle != null && s_panelBackgroundTexture != null)
+				return;
+
+			s_panelBackgroundTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
+			{
+				hideFlags = HideFlags.HideAndDontSave
+			};
+			s_panelBackgroundTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.18f));
+			s_panelBackgroundTexture.Apply();
+
+			s_panelWindowStyle = new GUIStyle(GUI.skin.window);
+			s_panelWindowStyle.normal.background = s_panelBackgroundTexture;
+			s_panelWindowStyle.onNormal.background = s_panelBackgroundTexture;
+			s_panelWindowStyle.border = new RectOffset(0, 0, 0, 0);
 		}
 
 		private static void AutoGrowPanelForContent()
@@ -313,8 +357,8 @@ namespace Mod.Cheats
 			if (!Settings.dpsMeterPanelLocked || s_panelLabelStyle == null)
 				return;
 
-			float availableWidth = Mathf.Max(120f, s_panelRect.width - 16f);
-			float neededHeight = s_panelLabelStyle.CalcHeight(s_panelTextContent, availableWidth) + 34f;
+			float availableWidth = Mathf.Max(120f, s_panelRect.width - 28f);
+			float neededHeight = s_panelLabelStyle.CalcHeight(s_panelTextContent, availableWidth) + 94f;
 			if (neededHeight > s_panelRect.height)
 			{
 				s_panelRect.height = neededHeight;
@@ -323,9 +367,22 @@ namespace Mod.Cheats
 
 		private static void DrawPanelWindow(int windowId)
 		{
+			Drawing.DrawMoveIcon(new Rect(8f, 6f, 18f, 18f));
+			Drawing.OutlinedLabel(new Rect(32f, 6f, s_panelRect.width - 66f, 22f), "DAMAGE METER", Theme.Label(13, FontStyle.Bold));
 			var style = s_panelLabelStyle ?? GUI.skin.label;
-			Rect contentRect = new Rect(8f, 24f, s_panelRect.width - 16f, s_panelRect.height - 32f);
-			GUI.Label(contentRect, s_panelTextContent, style);
+			Drawing.OutlinedLabel(new Rect(14f, 34f, s_panelRect.width - 28f, 16f), "CURRENT DPS", Theme.Label(11, FontStyle.Bold));
+			Drawing.OutlinedLabel(new Rect(14f, 46f, s_panelRect.width - 28f, 36f), FormatNumber(s_currentDps), s_panelMetricStyle ?? GUI.skin.label);
+			Rect contentRect = new Rect(14f, 84f, s_panelRect.width - 28f, s_panelRect.height - 94f);
+			Drawing.OutlinedLabel(contentRect, s_panelTextContent, style);
+
+			Rect closeRect = new Rect(s_panelRect.width - 30f, 4f, 24f, 22f);
+			if (Drawing.OutlinedButton(closeRect, "X", Theme.Button(12, danger: true), FontStyle.Bold))
+			{
+				Settings.enableDpsMeter = false;
+				Reset();
+				SettingsConfig.ApplyToPreferencesFromSettings();
+				SettingsConfig.Save();
+			}
 
 			if (!Settings.dpsMeterPanelLocked)
 			{
@@ -336,8 +393,10 @@ namespace Mod.Cheats
 					ResizeGripSize);
 				GUI.Box(resizeGripRect, "");
 				ProcessPanelResizing(resizeGripRect);
-				GUI.DragWindow(new Rect(0, 0, s_panelRect.width - ResizeGripSize - 6f, 20f));
 			}
+
+			// The move handle always works; the lock only prevents resizing.
+			GUI.DragWindow(new Rect(0, 0, s_panelRect.width - 36f, 28f));
 
 			_ = windowId;
 		}
@@ -481,7 +540,6 @@ namespace Mod.Cheats
 				s_textBuilder.Append('\n');
 			}
 			s_textBuilder.Append("Total Damage: ").Append(FormatNumber(s_totalDamage)).Append('\n');
-			s_textBuilder.Append("Current DPS: ").Append(FormatNumber(s_currentDps)).Append('\n');
 			s_textBuilder.Append("Average DPS: ").Append(FormatNumber(avgDps)).Append('\n');
 			s_textBuilder.Append("Peak DPS: ").Append(FormatNumber(s_peakDps)).Append('\n');
 			s_textBuilder.Append("Min DPS: ").Append(FormatMaybe(s_minDps)).Append('\n');

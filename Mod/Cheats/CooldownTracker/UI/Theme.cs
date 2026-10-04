@@ -316,7 +316,7 @@ namespace Mod.Cheats.CooldownTracker
             FontStyle fs = FontStyle.Normal, TextAnchor anchor = TextAnchor.MiddleLeft, bool serif = false)
         {
             GUI.color = c;
-            GUI.Label(r, text, Label(size, fs, anchor, serif));
+            Drawing.OutlinedLabel(r, text, Label(size, fs, anchor, serif));
             GUI.color = Color.white;
         }
 

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
 using UnityEngine;
 using Color = UnityEngine.Color;
 using MelonLoader;
@@ -9,6 +11,8 @@ namespace Mod
 	{
 		public static Texture2D? lineTex = new Texture2D(1, 1);
 		public static GUIStyle? StringStyle { get; private set; }
+		private static int s_hudBackgroundAttempts;
+		private static Texture2D? s_hudBackgroundTexture;
 
 		// private static int debugLastFrame = -1;
 		// private static int debugLogsThisFrame = 0;
@@ -242,8 +246,340 @@ namespace Mod
 				// Ensure default text color is neutral; specific draws will override
 				StringStyle.normal.textColor = Color.white;
 			}
+
+			EnsureHudBackground();
 		}
 
+		public static void DrawHudBackground(Rect rect, float opacity = 0.6f)
+		{
+			EnsureHudBackground();
+			if (s_hudBackgroundTexture == null)
+				return;
+
+			Color previousColor = GUI.color;
+			GUI.color = new Color(1f, 1f, 1f, opacity);
+			GUI.DrawTexture(rect, s_hudBackgroundTexture, ScaleMode.ScaleAndCrop, true);
+			GUI.color = previousColor;
+		}
+
+		private static void EnsureHudBackground()
+		{
+			if (s_hudBackgroundTexture != null || s_hudBackgroundAttempts >= 5)
+				return;
+
+			s_hudBackgroundAttempts++;
+			try
+			{
+				string userDataDirectory = Path.GetDirectoryName(SettingsConfig.GetStandaloneConfigPath())!;
+				string overridePath = Path.Combine(userDataDirectory, "LEHudBackground.png");
+				byte[]? imageBytes = File.Exists(overridePath)
+					? File.ReadAllBytes(overridePath)
+					: ReadEmbeddedHudBackground();
+				if (imageBytes == null || imageBytes.Length == 0)
+				{
+					MelonLogger.Warning("[LEHud] HUD background image not found.");
+					return;
+				}
+
+				var source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+				if (!ImageConversion.LoadImage(source, imageBytes))
+				{
+					UnityEngine.Object.Destroy(source);
+					MelonLogger.Warning("[LEHud] HUD background image failed to decode.");
+					return;
+				}
+
+				s_hudBackgroundTexture = CreateSoftHudBackground(source);
+				UnityEngine.Object.Destroy(source);
+				MelonLogger.Msg("[LEHud] HUD background loaded.");
+			}
+			catch (System.Exception exception)
+			{
+				MelonLogger.Warning($"[LEHud] HUD background could not be loaded: {exception.Message}");
+			}
+		}
+
+		private static byte[]? ReadEmbeddedHudBackground()
+		{
+			using Stream? resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("Mod.LEHudBackground.png");
+			if (resource == null)
+				return null;
+
+			using var memory = new MemoryStream();
+			resource.CopyTo(memory);
+			return memory.ToArray();
+		}
+
+		private static Texture2D CreateSoftHudBackground(Texture2D source)
+		{
+			int width = Mathf.Max(1, source.width / 2);
+			int height = Mathf.Max(1, source.height / 2);
+			Color[] sourcePixels = source.GetPixels();
+			Color[] reducedPixels = new Color[width * height];
+			for (int y = 0; y < height; y++)
+			{
+				int startY = y * source.height / height;
+				int endY = Mathf.Max(startY + 1, (y + 1) * source.height / height);
+				for (int x = 0; x < width; x++)
+				{
+					int startX = x * source.width / width;
+					int endX = Mathf.Max(startX + 1, (x + 1) * source.width / width);
+					Color sum = Color.clear;
+					int count = 0;
+					for (int sampleY = startY; sampleY < endY; sampleY++)
+					{
+						for (int sampleX = startX; sampleX < endX; sampleX++)
+						{
+							sum += sourcePixels[sampleY * source.width + sampleX];
+							count++;
+						}
+					}
+					reducedPixels[y * width + x] = sum / count;
+				}
+			}
+
+			var softened = new Texture2D(width, height, TextureFormat.RGBA32, false)
+			{
+				filterMode = FilterMode.Bilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+			BoxBlur(reducedPixels, width, height, 3);
+			softened.SetPixels(reducedPixels);
+			softened.Apply();
+			return softened;
+		}
+
+		private static void BoxBlur(Color[] pixels, int width, int height, int radius)
+		{
+			Color[] temp = new Color[pixels.Length];
+			float norm = 1f / (radius * 2 + 1);
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					Color sum = Color.clear;
+					for (int k = -radius; k <= radius; k++)
+						sum += pixels[y * width + Mathf.Clamp(x + k, 0, width - 1)];
+					temp[y * width + x] = sum * norm;
+				}
+			}
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					Color sum = Color.clear;
+					for (int k = -radius; k <= radius; k++)
+						sum += temp[Mathf.Clamp(y + k, 0, height - 1) * width + x];
+					pixels[y * width + x] = sum * norm;
+				}
+			}
+		}
+
+		private static readonly Dictionary<GUIStyle, GUIStyle> s_outlineStyles = new Dictionary<GUIStyle, GUIStyle>();
+		private static GUIStyle? s_layoutLabelStyle;
+
+		// Black outline for light text, white outline for dark text.
+		public static Color OutlineColorFor(Color textColor)
+		{
+			float luminance = textColor.r * 0.299f + textColor.g * 0.587f + textColor.b * 0.114f;
+			return luminance > 0.5f ? Color.black : Color.white;
+		}
+
+		public static void OutlinedLabel(string text, params GUILayoutOption[] options)
+		{
+			if (s_layoutLabelStyle == null)
+			{
+				s_layoutLabelStyle = new GUIStyle(GUI.skin.label) { fontSize = 11, wordWrap = true };
+			}
+			var content = new GUIContent(text);
+			Rect rect = GUILayoutUtility.GetRect(content, s_layoutLabelStyle, options);
+			OutlinedLabel(rect, content, s_layoutLabelStyle);
+		}
+
+		public static void OutlinedLabel(Rect rect, string text, GUIStyle style)
+		{
+			OutlinedLabel(rect, new GUIContent(text), style);
+		}
+
+		public static void OutlinedLabel(Rect rect, GUIContent content, GUIStyle style)
+		{
+			DrawOutlinedText(rect, content, style, style.normal.textColor);
+		}
+
+		private static void DrawOutlinedText(Rect rect, GUIContent content, GUIStyle style, Color styleTextColor)
+		{
+			if (Event.current.type != EventType.Repaint)
+				return;
+
+			if (!s_outlineStyles.TryGetValue(style, out GUIStyle? text) || text == null)
+			{
+				text = new GUIStyle(style);
+				s_outlineStyles[style] = text;
+			}
+			text.fontSize = style.fontSize;
+			text.fontStyle = style.fontStyle;
+			text.alignment = style.alignment;
+			text.wordWrap = style.wordWrap;
+			text.clipping = style.clipping;
+			text.font = style.font;
+			text.padding = style.padding;
+			text.normal.background = null;
+
+			Color previous = GUI.color;
+			Color effective = new Color(styleTextColor.r * previous.r, styleTextColor.g * previous.g, styleTextColor.b * previous.b, 1f);
+			Color outline = OutlineColorFor(effective);
+			float offset = text.fontSize >= 16 ? 2f : 1f;
+
+			text.normal.textColor = outline;
+			GUI.color = new Color(1f, 1f, 1f, previous.a);
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 1; dy++)
+				{
+					if (dx == 0 && dy == 0)
+						continue;
+					GUI.Label(new Rect(rect.x + dx * offset, rect.y + dy * offset, rect.width, rect.height), content, text);
+				}
+			}
+
+			text.normal.textColor = styleTextColor;
+			GUI.color = previous;
+			GUI.Label(rect, content, text);
+		}
+
+		// Button/toggle whose caption is drawn separately so it can be outlined; the caption shrinks to fit.
+		public static bool OutlinedButton(Rect rect, string caption, GUIStyle style, FontStyle? fontStyle = null)
+		{
+			bool clicked = GUI.Button(rect, GUIContent.none, style);
+			DrawButtonCaption(rect, caption, style, fontStyle);
+			return clicked;
+		}
+
+		public static void DrawButtonCaption(Rect rect, string caption, GUIStyle style, FontStyle? fontStyle = null)
+		{
+			if (Event.current.type != EventType.Repaint)
+				return;
+
+			bool hover = rect.Contains(Event.current.mousePosition);
+			Color color = hover ? style.hover.textColor : style.normal.textColor;
+			GUIStyle captionStyle = GetCaptionStyle(style);
+			captionStyle.fontStyle = fontStyle ?? style.fontStyle;
+			captionStyle.fontSize = style.fontSize;
+			captionStyle.alignment = style.alignment == TextAnchor.UpperLeft ? TextAnchor.MiddleCenter : style.alignment;
+			captionStyle.padding = new RectOffset(2, 2, 0, 0);
+			captionStyle.wordWrap = false;
+			captionStyle.clipping = TextClipping.Overflow;
+
+			var content = new GUIContent(caption);
+			while (captionStyle.fontSize > 8 && captionStyle.CalcSize(content).x > rect.width - 6f)
+				captionStyle.fontSize--;
+
+			DrawOutlinedText(rect, content, captionStyle, color);
+		}
+
+		private static readonly Dictionary<GUIStyle, GUIStyle> s_captionStyles = new Dictionary<GUIStyle, GUIStyle>();
+
+		private static GUIStyle GetCaptionStyle(GUIStyle source)
+		{
+			if (!s_captionStyles.TryGetValue(source, out GUIStyle? caption) || caption == null)
+			{
+				caption = new GUIStyle(GUI.skin.label);
+				s_captionStyles[source] = caption;
+			}
+			caption.font = source.font;
+			return caption;
+		}
+		private static Texture2D? s_moveIconTexture;
+
+		private static Texture2D GetMoveIconTexture()
+		{
+			if (s_moveIconTexture != null)
+				return s_moveIconTexture;
+
+			const int size = 64;
+			const int samples = 3;
+			var pixels = new Color[size * size];
+			// Four arrows (up, down, left, right) from the centre: shaft + two head strokes each.
+			var segments = new List<(Vector2 a, Vector2 b)>();
+			Vector2 c = new Vector2(32f, 32f);
+			Vector2[] dirs = { new Vector2(0f, 1f), new Vector2(0f, -1f), new Vector2(-1f, 0f), new Vector2(1f, 0f) };
+			foreach (Vector2 d in dirs)
+			{
+				Vector2 perp = new Vector2(-d.y, d.x);
+				Vector2 tip = c + d * 26f;
+				segments.Add((c + d * 8f, tip));
+				segments.Add((tip, tip - d * 9f + perp * 9f));
+				segments.Add((tip, tip - d * 9f - perp * 9f));
+			}
+			const float halfWidth = 2.6f;
+			for (int y = 0; y < size; y++)
+			{
+				for (int x = 0; x < size; x++)
+				{
+					float coverage = 0f;
+					for (int sy = 0; sy < samples; sy++)
+					{
+						for (int sx = 0; sx < samples; sx++)
+						{
+							Vector2 pt = new Vector2(x + (sx + 0.5f) / samples, y + (sy + 0.5f) / samples);
+							foreach (var (a, b) in segments)
+							{
+								Vector2 ab = b - a;
+								float t = Mathf.Clamp01(Vector2.Dot(pt - a, ab) / ab.sqrMagnitude);
+								if ((pt - (a + ab * t)).magnitude <= halfWidth)
+								{
+									coverage += 1f;
+									break;
+								}
+							}
+						}
+					}
+					pixels[y * size + x] = new Color(1f, 1f, 1f, coverage / (samples * samples));
+				}
+			}
+
+			s_moveIconTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+			{
+				filterMode = FilterMode.Bilinear,
+				wrapMode = TextureWrapMode.Clamp,
+				hideFlags = HideFlags.HideAndDontSave
+			};
+			s_moveIconTexture.SetPixels(pixels);
+			s_moveIconTexture.Apply();
+			return s_moveIconTexture;
+		}
+
+		// Four-arrow move handle with a dark outline so it reads on any background.
+		public static void DrawMoveIcon(Rect rect)
+		{
+			if (Event.current.type != EventType.Repaint)
+				return;
+
+			Texture2D icon = GetMoveIconTexture();
+			Color previous = GUI.color;
+			GUI.color = new Color(0f, 0f, 0f, previous.a);
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 1; dy++)
+				{
+					if (dx != 0 || dy != 0)
+						GUI.DrawTexture(new Rect(rect.x + dx, rect.y + dy, rect.width, rect.height), icon);
+				}
+			}
+			GUI.color = new Color(0.93f, 0.9f, 0.83f, previous.a);
+			GUI.DrawTexture(rect, icon);
+			GUI.color = previous;
+		}
+
+		public static void DrawHeading(string text)
+		{
+			GUIStyle style = global::Mod.Cheats.CooldownTracker.Theme.Button(12, selected: false);
+			Rect rect = GUILayoutUtility.GetRect(GUIContent.none, style, GUILayout.Height(26f), GUILayout.ExpandWidth(true));
+			if (Event.current.type == EventType.Repaint)
+				style.Draw(rect, GUIContent.none, false, false, false, false);
+			DrawButtonCaption(rect, text, style, FontStyle.Bold);
+		}
 		public static void DrawString(Vector3 worldPosition, string label, bool centered = true)
 		{
 			if (!Settings.showESPLabels)
@@ -495,6 +831,17 @@ namespace Mod
 				UnityEngine.Object.Destroy(lineTex);
 				lineTex = null;
 			}
+			if (s_hudBackgroundTexture != null)
+			{
+				UnityEngine.Object.Destroy(s_hudBackgroundTexture);
+				s_hudBackgroundTexture = null;
+			}
+			if (s_moveIconTexture != null)
+			{
+				UnityEngine.Object.Destroy(s_moveIconTexture);
+				s_moveIconTexture = null;
+			}
+			s_hudBackgroundAttempts = 0;
 			EndDrawingPass();
 			// Do not touch GUI.skin here; class can now be safely touched outside OnGUI
 		}

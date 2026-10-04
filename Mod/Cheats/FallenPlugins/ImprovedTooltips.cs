@@ -16,6 +16,10 @@ internal static class ImprovedTooltips
     public static MelonPreferences_Entry<bool>? ShowFullItemName { get; private set; }
     public static MelonPreferences_Entry<bool>? ShowLegendaryPotential { get; private set; }
     public static MelonPreferences_Entry<bool>? CompareStashItems { get; private set; }
+    public static MelonPreferences_Entry<bool>? UseTerribleTooltipsEntry { get; private set; }
+
+    // false = Fallen Star's Improved Tooltips, true = MedicK's Terrible Tooltips.
+    public static bool UseTerribleTooltips => UseTerribleTooltipsEntry?.Value ?? false;
 
     private static bool s_kgImprovementsLoaded;
     public static bool KgImprovementsLoaded => s_kgImprovementsLoaded;
@@ -31,6 +35,7 @@ internal static class ImprovedTooltips
         ShowFullItemName = s_category.CreateEntry("ShowFullItemName", true, "Use the complete item name on ground labels");
         ShowLegendaryPotential = s_category.CreateEntry("ShowLPOnGroundLabels", true, "Show LP or Weaver's Will on ground labels");
         CompareStashItems = s_category.CreateEntry("ShowLPComparison", true, "Compare unique items against stash copies");
+        UseTerribleTooltipsEntry = s_category.CreateEntry("UseTerribleTooltips", false, "Use MedicK's Terrible Tooltips instead of Fallen's Improved Tooltips");
     }
 
     public static void Save()
@@ -44,6 +49,7 @@ internal static class ImprovedTooltips
         [HarmonyPrefix]
         private static void Prefix(TooltipItemManager __instance)
         {
+            if (UseTerribleTooltips) return;
             try
             {
                 var item = __instance?.ActiveItem;
@@ -62,6 +68,7 @@ internal static class ImprovedTooltips
         [HarmonyPostfix]
         private static void Postfix(GroundItemLabel __instance)
         {
+            if (UseTerribleTooltips) return;
             try { MelonCoroutines.Start(UpdateGroundLabel(__instance)); }
             catch (Exception e) { MelonLogger.Warning($"[LEHud] Ground-label enhancement failed to start: {e.Message}"); }
         }
@@ -217,5 +224,79 @@ internal static class ImprovedTooltips
 
         text.text = $"{baseName}{stats}{suffix}{labelMarker}";
         try { if (label.emphasized) text.text = text.text.ToUpperInvariant(); } catch { }
+        text.enableWordWrapping = false;
+
+        // The game sizes the highlight box once for the original name, and may re-layout it later,
+        // so keep re-fitting for a short while.
+        for (int frame = 0; frame < 12 && label != null && text != null; frame++)
+        {
+            FitLabelBox(label, text, frame == 0);
+            if (frame == 3) ApplyContrastOutline(text);
+            yield return null;
+        }
     }
-}
+
+    // Light base text gets a dark outline and dark text a light one (same rule as the HUD). Rich-text
+    // colours (LP, NEW, arrows) share the one outline, so it follows the label's base colour.
+    private const float OutlineWidth = 0.1f;
+
+    private static void ApplyContrastOutline(TextMeshProUGUI text)
+    {
+        try
+        {
+            UnityEngine.Color c = text.color;
+            float luminance = 0.299f * c.r + 0.587f * c.g + 0.114f * c.b;
+            UnityEngine.Color outline = luminance > 0.5f ? new UnityEngine.Color(0f, 0f, 0f, 1f) : new UnityEngine.Color(1f, 1f, 1f, 1f);
+            text.outlineColor = (UnityEngine.Color32)outline;
+            text.outlineWidth = OutlineWidth;
+        }
+        catch (Exception e) { MelonLogger.Warning($"[LEHud] Ground-label outline failed: {e.Message}"); }
+    }
+
+    private static float MeasureTextWidth(TextMeshProUGUI text)
+    {
+        try
+        {
+            text.ForceMeshUpdate();
+            return text.GetPreferredValues(text.text, 10000f, 0f).x;
+        }
+        catch { return 0f; }
+    }
+
+    // Grows the text rect and every non-stretched ancestor up to the label root by the same overflow,
+    // which resizes the background box wherever it sits in the hierarchy.
+    private static void FitLabelBox(GroundItemLabel label, TextMeshProUGUI text, bool dump)
+    {
+        try
+        {
+            UnityEngine.RectTransform textRt = text.rectTransform;
+            float needed = MeasureTextWidth(text) + 4f;
+            float delta = needed - textRt.rect.width;
+
+            if (dump)
+            {
+                var sb = new System.Text.StringBuilder();
+                for (UnityEngine.Transform? t = text.transform; t != null && t != label.transform.parent; t = t.parent)
+                {
+                    var r = t as UnityEngine.RectTransform;
+                    sb.Append($"{t.name}[w={(r != null ? r.rect.width : 0):0.#},a={(r != null ? r.anchorMin.x : 0):0.#}-{(r != null ? r.anchorMax.x : 0):0.#}] < ");
+                }
+                foreach (var rt in label.GetComponentsInChildren<UnityEngine.RectTransform>(true))
+                    sb.Append($"\n   {rt.name} w={rt.rect.width:0.#} h={rt.rect.height:0.#} a={rt.anchorMin.x:0.##}-{rt.anchorMax.x:0.##} sd={rt.sizeDelta.x:0.#} pv={rt.pivot.x:0.#} comps={string.Join(",", System.Linq.Enumerable.Select(rt.GetComponents<UnityEngine.Component>(), c => c?.GetType().Name))}");
+                MelonLogger.Msg($"[LEHud] Ground label layout: needed={needed:0.#} delta={delta:0.#} chain={sb}");
+            }
+
+            if (delta <= 0.5f) return;
+
+            for (UnityEngine.Transform? t = text.transform; t != null && t != label.transform.parent; t = t.parent)
+            {
+                if (t is UnityEngine.RectTransform rt && Math.Abs(rt.anchorMin.x - rt.anchorMax.x) < 0.001f)
+                    rt.SetSizeWithCurrentAnchors(UnityEngine.RectTransform.Axis.Horizontal, rt.rect.width + delta);
+            }
+
+            UnityEngine.RectTransform? bg = label.buttonBackground?.transform as UnityEngine.RectTransform;
+            if (bg != null && !text.transform.IsChildOf(bg) && Math.Abs(bg.anchorMin.x - bg.anchorMax.x) < 0.001f)
+                bg.SetSizeWithCurrentAnchors(UnityEngine.RectTransform.Axis.Horizontal, bg.rect.width + delta);
+        }
+        catch (Exception e) { MelonLogger.Warning($"[LEHud] Ground-label resize failed: {e.Message}"); }
+    }}

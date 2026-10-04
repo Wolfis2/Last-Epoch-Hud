@@ -125,6 +125,15 @@ namespace Mod.Cheats.Patches
             public class MainMenuPanel_BugReportHooks : MelonMod
             {
                 private static List<System.Reflection.MethodBase>? s_targets;
+                // Quiet lookups: AccessTools logs a warning per miss, and the game's member is named _bugReportButton.
+                private const System.Reflection.BindingFlags AnyMember = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+
+                private static System.Reflection.FieldInfo? FindBugButtonField(Type type)
+                    => type.GetField("_bugReportButton", AnyMember) ?? type.GetField("bugReportButton", AnyMember);
+
+                private static System.Reflection.MethodInfo? FindBugButtonGetter(Type type)
+                    => (type.GetProperty("_bugReportButton", AnyMember) ?? type.GetProperty("bugReportButton", AnyMember))?.GetGetMethod(true);
+
                 private static System.Reflection.FieldInfo? s_bugReportButtonField;
                 private static System.Reflection.MethodInfo? s_bugReportButtonGetter;
 
@@ -148,8 +157,8 @@ namespace Mod.Cheats.Patches
                             .Cast<System.Reflection.MethodBase>()
                             .ToList();
 
-                        s_bugReportButtonField = AccessTools.Field(mainMenuPanelType, "bugReportButton");
-                        s_bugReportButtonGetter = AccessTools.PropertyGetter(mainMenuPanelType, "bugReportButton");
+                        s_bugReportButtonField = FindBugButtonField(mainMenuPanelType);
+                        s_bugReportButtonGetter = FindBugButtonGetter(mainMenuPanelType);
 
                         if (s_targets.Count == 0)
                             return false;

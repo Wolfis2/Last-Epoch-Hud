@@ -52,7 +52,7 @@ namespace Mod.Cheats.CooldownTracker
             for (int i = 0; i < n; i++)
             {
                 var br = new Rect(r.x + i * (bw + gap), r.y, bw, r.height);
-                if (GUI.Button(br, labels[i], Theme.Button(Mathf.RoundToInt(10 * sc), i == selected)))
+                if (Drawing.OutlinedButton(br, labels[i], Theme.Button(Mathf.RoundToInt(10 * sc), i == selected)))
                     result = i;
             }
             return result;
@@ -127,7 +127,7 @@ namespace Mod.Cheats.CooldownTracker
             float rowH = 22f * sc;
             Theme.Text9(new Rect(x, y, w - 80f * sc, rowH), label, Theme.Text, Mathf.RoundToInt(10 * sc));
             GUI.color = Color.white;
-            bool clicked = GUI.Button(new Rect(x + w - 76f * sc, y + 1f * sc, 76f * sc, rowH - 2f * sc),
+            bool clicked = Drawing.OutlinedButton(new Rect(x + w - 76f * sc, y + 1f * sc, 76f * sc, rowH - 2f * sc),
                 buttonText, Theme.Button(Mathf.RoundToInt(9 * sc), selected));
             y += rowH + 4f * sc;
             return clicked;

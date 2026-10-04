@@ -248,7 +248,7 @@ namespace Mod.Cheats.CooldownTracker
                 float cs = 18f * sc;
                 _closeRect = new Rect(bar.xMax - cs - 6f * sc, bar.y + (titleH - cs) * 0.5f, cs, cs);
                 GUI.color = Color.white;
-                if (GUI.Button(_closeRect, "✕", Theme.Button(Mathf.RoundToInt(10 * sc), danger: true)))
+                if (Drawing.OutlinedButton(_closeRect, "✕", Theme.Button(Mathf.RoundToInt(10 * sc), danger: true)))
                     Close();
             }
         }
@@ -374,7 +374,7 @@ namespace Mod.Cheats.CooldownTracker
             {
                 float xs = 15f * sc;
                 GUI.color = Color.white;
-                if (GUI.Button(new Rect(tfX + tfW - xs - 1f * sc, tfY + (tfH - xs) * 0.5f, xs, xs),
+                if (Drawing.OutlinedButton(new Rect(tfX + tfW - xs - 1f * sc, tfY + (tfH - xs) * 0.5f, xs, xs),
                         "✕", Theme.Button(Mathf.RoundToInt(8 * sc), danger: true)))
                 {
                     Prefs.SetCustomLabel(effMI, s.SlotIndex, "");
@@ -387,7 +387,7 @@ namespace Mod.Cheats.CooldownTracker
             {
                 bool open = UiState.PickerSlot == s.SlotIndex;
                 GUI.color = Color.white;
-                if (GUI.Button(new Rect(tfX + tfW + 4f * sc, tfY, 20f * sc, tfH), "▼",
+                if (Drawing.OutlinedButton(new Rect(tfX + tfW + 4f * sc, tfY, 20f * sc, tfH), "▼",
                         Theme.Button(Mathf.RoundToInt(9 * sc), selected: open)))
                     UiState.PickerSlot = open ? -1 : s.SlotIndex;
             }
