@@ -67,16 +67,6 @@ namespace Mod.Cheats.Inventory
             // One scene scan per click, shared by the gate and the lookup
             // (FindObjectsOfType over a big town scene is hitch-prone on Deck).
             UIWaypointController[] controllers = FindControllers();
-
-            // Unlock gate — behave exactly like the map's own locked node:
-            // not unlocked → do nothing, leave NO game-state footprint.
-            if (!IsUnlocked(controllers, scene))
-            {
-                MelonLogger.Msg($"'{scene}' is not an unlocked waypoint for this character — ignoring");
-                _travelInProgress = false;
-                yield break;
-            }
-
             UIWaypointStandard wp = FindWaypointForScene(controllers, scene);
 
             // SPEC travel rule 4: waypoint miss → re-run the primer ONCE,
@@ -101,6 +91,15 @@ namespace Mod.Cheats.Inventory
             {
                 if (_warnedScenes.Add(scene))   // once per scene per session
                     MelonLogger.Warning($"waypoint '{scene}' not found after re-priming — travel unavailable here");
+                _travelInProgress = false;
+                yield break;
+            }
+
+            // Unlock gate — behave exactly like the map's own locked node:
+            // not unlocked → do nothing, leave NO game-state footprint.
+            if (!IsUnlocked(controllers, scene, wp))
+            {
+                MelonLogger.Msg($"'{scene}' is not an unlocked waypoint for this character — ignoring");
                 _travelInProgress = false;
                 yield break;
             }
@@ -144,7 +143,7 @@ namespace Mod.Cheats.Inventory
         // ── Unlock gate ───────────────────────────────────────────
         // True only when an era controller positively lists the scene as unlocked.
 
-        static bool IsUnlocked(UIWaypointController[] all, string scene)
+        static bool IsUnlocked(UIWaypointController[] all, string scene, UIWaypointStandard waypoint)
         {
             bool readAnything = false;
             if (all != null)
@@ -158,11 +157,32 @@ namespace Mod.Cheats.Inventory
                         int n = unlocked.Count;
                         readAnything = true;
                         for (int i = 0; i < n; i++)
-                            if ((unlocked[i] ?? "") == scene) return true;
+                        {
+                            string unlockedScene = unlocked[i] ?? "";
+                            if (unlockedScene == scene ||
+                                (waypoint != null && unlockedScene == waypoint.sceneName))
+                                return true;
+                        }
                     }
                     catch { }
                 }
             }
+
+            // Recent game builds can expose unlock strings that do not use
+            // the scene IDs passed to this menu. Fall back to the native
+            // waypoint's own unlocked/clickable state rather than blocking
+            // every destination on a string mismatch.
+            if (waypoint != null)
+            {
+                try
+                {
+                    if (waypoint.alwaysUnlocked) return true;
+                    var button = waypoint.waypointButton;
+                    if (button != null && button.interactable) return true;
+                }
+                catch { }
+            }
+
             if (!readAnything)
             {
                 // Council A1: unreadable unlock data fails closed instead of authorizing travel.
