@@ -160,9 +160,25 @@ namespace Mod.Cheats.CooldownTracker
                 _hudSkin.label = new GUIStyle(_label);
                 _hudSkin.label.normal.textColor = Text;
                 _hudSkin.toggle = new GUIStyle(_hudSkin.toggle);
+                _hudSkin.toggle.normal.background = Bordered(Surface, Border);
+                _hudSkin.toggle.hover.background = Bordered(SurfaceHi, BorderHi);
+                _hudSkin.toggle.onNormal.background = Bordered(Surface, AccentDim);
+                _hudSkin.toggle.onHover.background = Bordered(SurfaceHi, Accent);
                 _hudSkin.toggle.normal.textColor = Text;
                 _hudSkin.toggle.onNormal.textColor = TextHi;
+                _hudSkin.toggle.hover.textColor = TextHi;
+                _hudSkin.toggle.onHover.textColor = TextHi;
                 _hudSkin.textField = new GUIStyle(_textField);
+
+                var slider = _hudSkin.horizontalSlider;
+                slider.normal.background = Bordered(Inset, Border);
+                slider.hover.background = Bordered(Inset, BorderHi);
+                slider.active.background = Bordered(Inset, AccentDim);
+                var thumb = _hudSkin.horizontalSliderThumb;
+                thumb.normal.background = Bordered(Accent, AccentDim);
+                thumb.hover.background = Bordered(Accent, Accent);
+                thumb.active.background = Bordered(AccentDim, Accent);
+                thumb.border = new RectOffset(1, 1, 1, 1);
             }
 
             GUI.skin = _hudSkin;

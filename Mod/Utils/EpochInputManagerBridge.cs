@@ -139,7 +139,7 @@ namespace Mod.Utils
             return keyboardSet || mouseSet;
         }
 
-        private static bool TrySetMouseInputBlocked(bool blocked)
+        public static bool TrySetMouseInputBlocked(bool blocked, bool force = false)
         {
             try
             {
@@ -157,7 +157,8 @@ namespace Mod.Utils
 
                 if (s_hasAppliedMouseBlockState
                     && ReferenceEquals(s_lastAppliedMouseBlockInstance, instance)
-                    && s_lastAppliedMouseBlockState == blocked)
+                    && s_lastAppliedMouseBlockState == blocked
+                    && !force)
                 {
                     return true;
                 }

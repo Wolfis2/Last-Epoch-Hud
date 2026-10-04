@@ -97,6 +97,7 @@ namespace Mod;
 				SpecialEntityEspHelper.OnSceneChanged();
 				MinimapEnemyCircles.OnSceneChanged();
 				DamageNumberDiagnostics.OnSceneChanged();
+				TravelService.EnsurePrimed();
 			}
 			catch (System.Exception e)
 			{
@@ -138,6 +139,7 @@ namespace Mod;
 			}
 
 			RunUpdateSafely("Menu", Menu.OnUpdate);
+			RunUpdateSafely("TravelService", TravelService.Update);
 			RunUpdateSafely("CooldownTracker", CooldownTrackerRuntime.Update);
 			RunUpdateSafely("DpsMeter", DpsMeter.OnUpdate);
 			RunUpdateSafely("AntiIdleSystem", AntiIdleSystem.OnUpdate);

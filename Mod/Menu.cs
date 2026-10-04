@@ -25,6 +25,8 @@ namespace Mod
 		public static bool specialsSubDropdown = false; // Placeholder for future per-special options
 		private static bool s_hasAppliedInputBlockState;
 		private static bool s_lastAppliedInputBlockState;
+		private static bool s_hasAppliedMouseBlockState;
+		private static bool s_lastAppliedMouseBlockState;
 		private static int s_lastMenuToggleFrame = -1;
 		private static int s_selectedTab = 0;
 		private static readonly GUIContent[] s_tabLabels = new GUIContent[]
@@ -82,9 +84,19 @@ namespace Mod
 				windowRect.width - resizeGripSize, windowRect.height - resizeGripSize, resizeGripSize, resizeGripSize);
 			Box(resizeGripRect, "");
 
-			DragWindow(new Rect(0, 0, 10000, 20));
+			Rect closeRect = new Rect(windowRect.width - 30f, 1f, 24f, 22f);
+			if (GUI.Button(closeRect, "X", CooldownTrackerTheme.Button(10, danger: true)))
+				ToggleMenu("Close button");
+
+			DragWindow(new Rect(0, 0, windowRect.width - 34f, 24f));
 
 			ProcessResizing(resizeGripRect, windowID);
+
+			Event currentEvent = Event.current;
+			if (currentEvent != null && currentEvent.isMouse &&
+				new Rect(0f, 0f, windowRect.width, windowRect.height).Contains(currentEvent.mousePosition) &&
+				currentEvent.type != EventType.Used)
+				currentEvent.Use();
 		}
 
 		private static void DrawTabBar()
@@ -113,7 +125,7 @@ namespace Mod
 		{
 			GUI.enabled = true;
 
-			specialsSubDropdown = GUILayout.Toggle(specialsSubDropdown, "Specials", "button");
+			specialsSubDropdown = DrawSubmenuToggle(specialsSubDropdown, "Specials");
 			if (specialsSubDropdown)
 			{
 				Settings.espShowLootLizards = GUILayout.Toggle(Settings.espShowLootLizards, "Show Loot Lizards");
@@ -131,7 +143,7 @@ namespace Mod
 				Settings.espVerticalCullMeters = GUILayout.HorizontalSlider(Settings.espVerticalCullMeters, 0f, 200f);
 			}
 
-			npcDrawingsDropdown = GUILayout.Toggle(npcDrawingsDropdown, "NPC Alignment", "button");
+			npcDrawingsDropdown = DrawSubmenuToggle(npcDrawingsDropdown, "NPC Alignment");
 			if (npcDrawingsDropdown)
 			{
 				foreach (KeyValuePair<string, bool> entry in Settings.npcDrawings)
@@ -144,7 +156,7 @@ namespace Mod
 				}
 			}
 
-			npcClassificationsDropdown = GUILayout.Toggle(npcClassificationsDropdown, "NPC Rarity", "button");
+			npcClassificationsDropdown = DrawSubmenuToggle(npcClassificationsDropdown, "NPC Rarity");
 			if (npcClassificationsDropdown)
 			{
 				foreach (KeyValuePair<string, bool> entry in Settings.npcClassifications)
@@ -157,7 +169,7 @@ namespace Mod
 				}
 			}
 
-			itemDrawingsDropdown = GUILayout.Toggle(itemDrawingsDropdown, "Item Filters", "button");
+			itemDrawingsDropdown = DrawSubmenuToggle(itemDrawingsDropdown, "Item Filters");
 			if (itemDrawingsDropdown)
 			{
 				bool lootFilterEnabled = Settings.useLootFilter;
@@ -213,7 +225,7 @@ namespace Mod
 				Settings.autoDisconnectOnlyWhenNoPotions = GUILayout.Toggle(Settings.autoDisconnectOnlyWhenNoPotions, "Only Disconnect When Out of Potions");
 			}
 
-			dpsMeterSubDropdown = GUILayout.Toggle(dpsMeterSubDropdown, "DPS Meter", "button");
+			dpsMeterSubDropdown = DrawSubmenuToggle(dpsMeterSubDropdown, "DPS Meter");
 			if (dpsMeterSubDropdown)
 			{
 				bool wasEnabled = Settings.enableDpsMeter;
@@ -318,6 +330,12 @@ namespace Mod
 			Prefs.Save();
 		}
 
+		private static bool DrawSubmenuToggle(bool selected, string label)
+		{
+			return GUILayout.Toggle(selected, label,
+				CooldownTrackerTheme.Button(10, selected: selected), GUILayout.Height(26f));
+		}
+
 		private static void DrawCooldownsTab()
 		{
 			GUI.enabled = true;
@@ -398,7 +416,7 @@ namespace Mod
 			}
 
 			GUILayout.Space(10f);
-			antiIdleSubDropdown = GUILayout.Toggle(antiIdleSubDropdown, "Anti-Idle", "button");
+			antiIdleSubDropdown = DrawSubmenuToggle(antiIdleSubDropdown, "Anti-Idle");
 			if (antiIdleSubDropdown)
 			{
 				Settings.useSimpleAntiIdle = GUILayout.Toggle(Settings.useSimpleAntiIdle, "Enable Anti-Idle");
@@ -431,7 +449,7 @@ namespace Mod
 #if DEBUG
 		private static void DrawDebugToolsSection()
 		{
-			debugToolsDropdown = GUILayout.Toggle(debugToolsDropdown, "DEBUG Tools", "button");
+			debugToolsDropdown = DrawSubmenuToggle(debugToolsDropdown, "DEBUG Tools");
 			if (!debugToolsDropdown)
 			{
 				return;
@@ -557,6 +575,15 @@ namespace Mod
 				s_hasAppliedInputBlockState = true;
 			}
 
+			bool pointerOverHud = IsPointerOverHud();
+			bool shouldBlockMouse = shouldBlockGameInput || pointerOverHud;
+			if (pointerOverHud || !s_hasAppliedMouseBlockState || s_lastAppliedMouseBlockState != shouldBlockMouse)
+			{
+				EpochInputManagerBridge.TrySetMouseInputBlocked(shouldBlockMouse, force: pointerOverHud);
+				s_lastAppliedMouseBlockState = shouldBlockMouse;
+				s_hasAppliedMouseBlockState = true;
+			}
+
 			// Debug key for auto-potion system (F12)
 			if (Input.GetKeyDown(KeyCode.F12))
 			{
@@ -570,6 +597,14 @@ namespace Mod
 				DebugDiagnostics.LogCorrelationSnapshot();
 			}
 #endif
+		}
+
+		private static bool IsPointerOverHud()
+		{
+			if (!guiVisible) return false;
+			Vector3 mouse = Input.mousePosition;
+			Vector2 guiMouse = new Vector2(mouse.x, Screen.height - mouse.y);
+			return windowRect.Contains(guiMouse);
 		}
 
 		private static void ToggleMenu(string inputSource)

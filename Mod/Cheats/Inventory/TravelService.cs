@@ -25,6 +25,7 @@ namespace Mod.Cheats.Inventory
         static bool _primed;
         static bool _primerRunning;
         static bool _unlockUnreadableWarned;
+        static float _nextPrimeRetryAt;
         static readonly HashSet<string> _warnedScenes = new();
 
         public static void EnsurePrimed()
@@ -37,7 +38,20 @@ namespace Mod.Cheats.Inventory
         // The travel guard spans the whole scene transition (safety rule #3:
         // concurrent travel once summoned EHG's bug reporter) — it is cleared
         // here on scene load, with a timeout failsafe inside TravelCoroutine.
-        public static void NotifySceneLoaded() => _travelInProgress = false;
+        public static void NotifySceneLoaded()
+        {
+            _travelInProgress = false;
+            _primed = false;
+            _nextPrimeRetryAt = 0f;
+        }
+
+        public static void Update()
+        {
+            if (_primed || _primerRunning || Time.time < _nextPrimeRetryAt) return;
+            if (!IsPlayableScene()) return;
+            _nextPrimeRetryAt = Time.time + 1f;
+            EnsurePrimed();
+        }
 
         public static void RequestTravel(string scene)
         {
@@ -58,8 +72,9 @@ namespace Mod.Cheats.Inventory
 
             EnsurePrimed();
             float waited = 0f;
-            while (_primerRunning && waited < 10f)
+            while (!_primed && waited < 20f)
             {
+                if (!_primerRunning) EnsurePrimed();
                 yield return new WaitForSeconds(0.25f);
                 waited += 0.25f;
             }
@@ -76,10 +91,12 @@ namespace Mod.Cheats.Inventory
             {
                 Dbg.Log($"'{scene}' not found — re-priming once");
                 _primed = false;
+                _nextPrimeRetryAt = 0f;
                 EnsurePrimed();
                 float w2 = 0f;
-                while (_primerRunning && w2 < 10f)
+                while (!_primed && w2 < 20f)
                 {
+                    if (!_primerRunning) EnsurePrimed();
                     yield return new WaitForSeconds(0.25f);
                     w2 += 0.25f;
                 }
@@ -99,9 +116,34 @@ namespace Mod.Cheats.Inventory
             // not unlocked → do nothing, leave NO game-state footprint.
             if (!IsUnlocked(controllers, scene, wp))
             {
-                MelonLogger.Msg($"'{scene}' is not an unlocked waypoint for this character — ignoring");
-                _travelInProgress = false;
-                yield break;
+                // The first gameplay load can finish before the player's
+                // waypoint state reaches every hidden era controller. Re-prime
+                // once and re-read the native state before treating it as locked.
+                _primed = false;
+                _nextPrimeRetryAt = 0f;
+                EnsurePrimed();
+                float w3 = 0f;
+                while (!_primed && w3 < 10f)
+                {
+                    if (!_primerRunning) EnsurePrimed();
+                    yield return new WaitForSeconds(0.25f);
+                    w3 += 0.25f;
+                }
+                float unlockWaited = 0f;
+                while (unlockWaited < 10f)
+                {
+                    controllers = FindControllers();
+                    wp = FindWaypointForScene(controllers, scene);
+                    if (wp != null && IsUnlocked(controllers, scene, wp)) break;
+                    yield return new WaitForSeconds(0.25f);
+                    unlockWaited += 0.25f;
+                }
+                if (wp == null || !IsUnlocked(controllers, scene, wp))
+                {
+                    MelonLogger.Msg($"'{scene}' is not an unlocked waypoint for this character — ignoring");
+                    _travelInProgress = false;
+                    yield break;
+                }
             }
 
             // Council A2: use the verified waypoint-click path without mutating WaypointManager state.
@@ -138,6 +180,19 @@ namespace Mod.Cheats.Inventory
         {
             try { return UnityEngine.Object.FindObjectsOfType<UIWaypointController>(true); }
             catch { return null; }
+        }
+
+        static bool IsPlayableScene()
+        {
+            try
+            {
+                string scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ?? "";
+                string name = scene.ToLowerInvariant();
+                return scene.Length > 0 && !name.Contains("loading") && !name.Contains("menu")
+                    && !name.Contains("boot") && !name.Contains("splash")
+                    && !name.Contains("character") && !name.Contains("login");
+            }
+            catch { return false; }
         }
 
         // ── Unlock gate ───────────────────────────────────────────
@@ -232,17 +287,7 @@ namespace Mod.Cheats.Inventory
             float waited = 0f;
             while (waited < 30f)
             {
-                bool inGame = false;
-                try
-                {
-                    string s = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name ?? "";
-                    string l = s.ToLower();
-                    inGame = s.Length > 0 && !l.Contains("loading") && !l.Contains("menu")
-                          && !l.Contains("boot") && !l.Contains("splash") && !l.Contains("character")
-                          && !l.Contains("login");
-                }
-                catch { }
-                if (inGame) break;
+                if (IsPlayableScene()) break;
                 yield return new WaitForSeconds(0.5f);
                 waited += 0.5f;
             }
@@ -255,6 +300,7 @@ namespace Mod.Cheats.Inventory
                 // EnsurePrimed (every inventory open + travel click) retries.
                 Dbg.Log("primer: no era controllers in this scene — will retry later");
                 _primerRunning = false;
+                _nextPrimeRetryAt = Time.time + 1f;
                 yield break;
             }
 
@@ -293,9 +339,33 @@ namespace Mod.Cheats.Inventory
                 foreach (var go in chain) { try { go.SetActive(false); } catch { } }
             }
 
-            _primed = true;
+            yield return new WaitForSeconds(0.5f);
+
+            bool allPopulated = all.Length >= 5;
+            foreach (UIWaypointController ctrl in all)
+            {
+                try
+                {
+                    if (ctrl.waypointsInMenu == null || ctrl.waypointsInMenu.Count == 0)
+                    {
+                        allPopulated = false;
+                        break;
+                    }
+                }
+                catch { allPopulated = false; break; }
+            }
+
+            _primed = allPopulated;
             _primerRunning = false;
-            Dbg.Log("primer: all era controllers primed — teleport ready");
+            if (_primed)
+            {
+                Dbg.Log($"primer: all {all.Length} era controllers populated — teleport ready");
+            }
+            else
+            {
+                _nextPrimeRetryAt = Time.time + 1f;
+                Dbg.Log($"primer: {all.Length} era controllers not fully populated — retry scheduled");
+            }
         }
     }
 }
