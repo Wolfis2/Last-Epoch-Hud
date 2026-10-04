@@ -14,7 +14,15 @@ The inventory implementation is adapted from [MedicK's Advanced Inventory / Terr
 
 The **Cooldowns** tab integrates MedicK's Terrible Cooldowns: local-player skill artwork above the character during cooldowns, console-style input badges, keyboard/controller detection, per-slot tracking, and per-input-mode labels and glyph selection. Startup/non-player ability-bar icons are ignored; a skill must be observed ready before its next cooldown can draw. Display and behavior settings are in the tab; there is no separate Home-key settings panel. The LEHud window and controls use the tracker's charcoal-and-gold visual theme, with a top-right close button and mouse input capture over the window. Existing tracker preference names are retained. Attribution and license details are in `Mod/Cheats/CooldownTracker/THIRD_PARTY_NOTICES.md`.
 
+## Fallen utilities
+
+The **Auto Enabler** and **Improved Tooltips** tabs integrate the corresponding features described by [FallenStar08/Fallen_LE_Mods](https://github.com/FallenStar08/Fallen_LE_Mods): proximity activation for nearby shrine/chest/cache and related interactables, filter-rule details on item tooltips, stash ownership/LP comparisons, and configurable ground labels. Controls use LEHud's dark-and-gold menu style; no standalone Fallen MelonMod or cloned Fallen Settings UI is loaded. Improved Observatory is excluded because its upstream implementation is commented out/deprecated. The upstream repository has no license file, so these features are implemented within LEHud rather than copied as third-party source.
+
 The **Gameplay** tab includes minimap marker controls for Normal, Magic, Rare, Unique, and Boss monsters: independent sizes and hex colors, plus a shared opacity setting. Default sizes are 6/8/10/12/16 px; colors are red, blue, yellow, and orange for Unique/Boss.
+
+## Fallen utilities
+
+LEHud incorporates **Improved Tooltips** (filter-rule details, stash ownership/LP comparison, and configurable ground labels) and **Auto Enabler** (proximity activation for supported shrines, chests, caches, portals, prisons, and rifts). Settings are available in the **Improved Tooltips** and **Auto Enabler** tabs; no separate Fallen settings window or MelonMod is loaded. The Observatory feature is not included because its upstream implementation is deprecated/commented out. Feature behavior is based on [FallenStar08/Fallen_LE_Mods](https://github.com/FallenStar08/Fallen_LE_Mods); settings and rendering use LEHud's own preferences and visual controls.
 
 ## Requirements
 

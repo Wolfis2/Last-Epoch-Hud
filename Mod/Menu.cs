@@ -7,6 +7,8 @@ using Mod.Cheats.ESP;
 using Mod.Cheats.Inventory;
 using TrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
 using CooldownTrackerTheme = Mod.Cheats.CooldownTracker.Theme;
+using FallenAutoEnabler = Mod.Cheats.FallenPlugins.AutoEnabler;
+using FallenImprovedTooltips = Mod.Cheats.FallenPlugins.ImprovedTooltips;
 using Mod.Game;
 using Mod.Utils;
 
@@ -36,7 +38,9 @@ namespace Mod
 			new GUIContent("Inventory"),
 			new GUIContent("Cooldowns"),
 			new GUIContent("Gameplay"),
-			new GUIContent("Risky / Debug")
+			new GUIContent("Risky / Debug"),
+			new GUIContent("Auto Enabler"),
+			new GUIContent("Improved Tooltips")
 		};
 		private static readonly Vector2[] s_tabScrollPositions = new Vector2[s_tabLabels.Length];
 #if DEBUG
@@ -71,6 +75,12 @@ namespace Mod
 				case 4:
 					DrawGameplayTab();
 					break;
+				case 6:
+					DrawAutoEnablerTab();
+					break;
+				case 7:
+					DrawImprovedTooltipsTab();
+					break;
 				default:
 					DrawRiskyAndDebugTab();
 					break;
@@ -101,24 +111,28 @@ namespace Mod
 
 		private static void DrawTabBar()
 		{
-			GUILayout.BeginHorizontal();
-			for (int i = 0; i < s_tabLabels.Length; i++)
+			const int tabsPerRow = 4;
+			for (int row = 0; row < (s_tabLabels.Length + tabsPerRow - 1) / tabsPerRow; row++)
 			{
-				bool isSelected = s_selectedTab == i;
-				Color prevColor = GUI.color;
-				GUI.color = Color.white;
-
-				bool pressed = GUILayout.Toggle(isSelected, s_tabLabels[i],
-					CooldownTrackerTheme.Button(10, selected: isSelected), GUILayout.Height(26f));
-				GUI.color = prevColor;
-
-				if (pressed && !isSelected)
+				GUILayout.BeginHorizontal();
+				for (int col = 0; col < tabsPerRow; col++)
 				{
-					s_selectedTab = i;
-				}
-			}
+					int i = row * tabsPerRow + col;
+					if (i >= s_tabLabels.Length) break;
+					bool isSelected = s_selectedTab == i;
+					Color prevColor = GUI.color;
+					GUI.color = Color.white;
 
-			GUILayout.EndHorizontal();
+					bool pressed = GUILayout.Toggle(isSelected, s_tabLabels[i],
+						CooldownTrackerTheme.Button(10, selected: isSelected),
+						GUILayout.Height(26f), GUILayout.ExpandWidth(true));
+					GUI.color = prevColor;
+
+					if (pressed && !isSelected)
+						s_selectedTab = i;
+				}
+				GUILayout.EndHorizontal();
+			}
 		}
 
 		private static void DrawEspTab()
@@ -358,6 +372,66 @@ namespace Mod
 			Rect hostRect = GUILayoutUtility.GetRect(
 				Mathf.Max(320f, windowRect.width - 28f), height, GUILayout.ExpandWidth(true));
 			TrackerRuntime.DrawSettingsTab(hostRect);
+		}
+
+		private static void DrawAutoEnablerTab()
+		{
+			GUI.enabled = true;
+			bool previousShowRings = FallenAutoEnabler.ShowRings.Value;
+			FallenAutoEnabler.ShowRings.Value = DrawOptionToggle(previousShowRings, "Show proximity rings");
+
+			float previousDistance = FallenAutoEnabler.Distance.Value;
+			GUILayout.Label($"Activation radius: {previousDistance:F1} m");
+			FallenAutoEnabler.Distance.Value = GUILayout.HorizontalSlider(previousDistance, 1f, 10f);
+
+			GUILayout.Space(6f);
+			GUILayout.Label("Proximity ring color");
+			Color previousColor = FallenAutoEnabler.RingColor.Value;
+			Color color = previousColor;
+			color.r = DrawColorChannel("R", color.r);
+			color.g = DrawColorChannel("G", color.g);
+			color.b = DrawColorChannel("B", color.b);
+			color.a = DrawColorChannel("Opacity", color.a);
+			FallenAutoEnabler.RingColor.Value = color;
+
+			GUILayout.Space(6f);
+			Rect filterHeader = GUILayoutUtility.GetRect(0f, 20f, GUILayout.ExpandWidth(true));
+			CooldownTrackerTheme.Text9(filterHeader, "AUTO-ACTIVATION FILTERS", CooldownTrackerTheme.Accent, 10, FontStyle.Bold);
+			foreach (var entry in FallenAutoEnabler.TypeOptions)
+				entry.Value.Value = DrawOptionToggle(entry.Value.Value, $"Auto-activate {entry.Key}");
+			FallenAutoEnabler.DebugLog.Value = DrawOptionToggle(FallenAutoEnabler.DebugLog.Value, "Auto Enabler debug logging");
+			GUILayout.Label($"Tracked interactables: {FallenAutoEnabler.TrackedCount}");
+			GUILayout.Label(FallenAutoEnabler.LastEvent);
+
+			if (previousShowRings != FallenAutoEnabler.ShowRings.Value ||
+				Mathf.Abs(previousDistance - FallenAutoEnabler.Distance.Value) > 0.001f || color != previousColor)
+				FallenAutoEnabler.ApplySettings();
+		}
+
+		private static float DrawColorChannel(string label, float value)
+		{
+			GUILayout.BeginHorizontal();
+			GUILayout.Label(label, GUILayout.Width(64f));
+			float next = GUILayout.HorizontalSlider(value, 0f, 1f);
+			GUILayout.Label(next.ToString("F2"), GUILayout.Width(36f));
+			GUILayout.EndHorizontal();
+			return next;
+		}
+
+		private static void DrawImprovedTooltipsTab()
+		{
+			GUI.enabled = true;
+			if (FallenImprovedTooltips.KgImprovementsLoaded)
+				GUILayout.Label("Ground-label name and LP additions are disabled while kg_LastEpoch_Improvements is loaded.");
+
+			GUI.enabled = !FallenImprovedTooltips.KgImprovementsLoaded;
+			FallenImprovedTooltips.ShowFullItemName!.Value = DrawOptionToggle(
+				FallenImprovedTooltips.ShowFullItemName.Value, "Use full item names on ground labels");
+			FallenImprovedTooltips.ShowLegendaryPotential!.Value = DrawOptionToggle(
+				FallenImprovedTooltips.ShowLegendaryPotential.Value, "Show LP / Weaver's Will on ground labels");
+			GUI.enabled = true;
+			FallenImprovedTooltips.CompareStashItems!.Value = DrawOptionToggle(
+				FallenImprovedTooltips.CompareStashItems.Value, "Compare LP / Weaver's Will with stash copies");
 		}
 
 		private static void DrawGameplayTab()
@@ -681,6 +755,8 @@ namespace Mod
 			SettingsConfig.ApplyToPreferencesFromSettings();
 			SettingsConfig.Save();
 			TrackerRuntime.Save();
+			FallenAutoEnabler.Save();
+			FallenImprovedTooltips.Save();
 			MelonLogger.Msg("[LEHud] Preferences Saved!");
 			AntiIdleSystem.OnMenuClosed();
 		}

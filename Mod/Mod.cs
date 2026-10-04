@@ -3,6 +3,8 @@ using Mod.Cheats;
 using Mod.Cheats.ESP;
 using Mod.Cheats.Inventory;
 using CooldownTrackerRuntime = Mod.Cheats.CooldownTracker.CooldownTracker;
+using FallenAutoEnabler = Mod.Cheats.FallenPlugins.AutoEnabler;
+using FallenImprovedTooltips = Mod.Cheats.FallenPlugins.ImprovedTooltips;
 using Mod.Game;
 using System.Reflection;
 using HarmonyLib;
@@ -41,6 +43,8 @@ namespace Mod;
 				SettingsConfig.LoadIntoSettings();
 				Prefs.Init();
 				CooldownTrackerRuntime.Initialize();
+				FallenAutoEnabler.Initialize();
+				FallenImprovedTooltips.Initialize();
 				MapHack.InitializeSceneFallback();
 
 				s_harmony = new HarmonyLib.Harmony(HarmonyId);
@@ -99,6 +103,7 @@ namespace Mod;
 				MinimapEnemyCircles.OnSceneChanged();
 				DamageNumberDiagnostics.OnSceneChanged();
 				TravelService.EnsurePrimed();
+				FallenAutoEnabler.OnSceneInitialized();
 			}
 			catch (System.Exception e)
 			{
@@ -141,6 +146,7 @@ namespace Mod;
 
 			RunUpdateSafely("Menu", Menu.OnUpdate);
 			RunUpdateSafely("TravelService", TravelService.Update);
+			RunUpdateSafely("AutoEnabler", FallenAutoEnabler.Update);
 			RunUpdateSafely("CooldownTracker", CooldownTrackerRuntime.Update);
 			RunUpdateSafely("DpsMeter", DpsMeter.OnUpdate);
 			RunUpdateSafely("AntiIdleSystem", AntiIdleSystem.OnUpdate);
@@ -226,6 +232,8 @@ namespace Mod;
 		{
 			//MelonLogger.Msg("OnApplicationQuit");
 			CooldownTrackerRuntime.Save();
+			FallenAutoEnabler.Save();
+			FallenImprovedTooltips.Save();
 			if (s_timeScaleWasApplied)
 			{
 				UnityEngine.Time.timeScale = 1.0f;
